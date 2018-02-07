@@ -3,6 +3,7 @@ import ConfigParser
 DEFAULT_SETTINGS = {
     'nicehash': {
         'wallet': '',
+        'workername': 'nuxhash',
         'region': 'usa'
     },
     'excavator': {
@@ -25,6 +26,7 @@ def read_settings_from_file(fd):
 
     nicehash = {}
     nicehash['wallet'] = get_option(parser.get, 'nicehash', 'wallet')
+    nicehash['wallet'] = get_option(parser.get, 'nicehash', 'workername')
     nicehash['region'] = get_option(parser.get, 'nicehash', 'region')
     settings['nicehash'] = nicehash
 

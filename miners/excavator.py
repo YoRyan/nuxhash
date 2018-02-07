@@ -17,12 +17,15 @@ class ExcavatorServer:
     BUFFER_SIZE = 1024
     TIMEOUT = 10
 
-    def __init__(self, executable, port):
+    def __init__(self, executable, port, stratums, auth):
         self.executable = executable
         self.address = ('127.0.0.1', port)
+        self.stratums = stratums
+        self.auth = auth
         # dict of algorithm name -> (excavator algorithm id, [attached devices])
         self.running_algorithms = {}
         # dict of device id -> excavator worker id
+        # TODO allow multiple simultaneous algorithms per device
         self.running_workers = {}
 
     def start(self):
@@ -81,10 +84,11 @@ class ExcavatorServer:
         else:
             return True
 
-    def dispatch_device(self, algorithm, stratums, auth, device):
+    def dispatch_device(self, algorithm, device):
+        """Start running algorithm on device."""
         if algorithm not in self.running_algorithms:
-            add_params = [algorithm] + sum([[stratums[i], auth] for i, ma in
-                                            enumerate(algorithm.split('_'))], [])
+            add_params = [algorithm] + sum([[self.stratums[ma], self.auth] for
+                                            ma in algorithm.split('_')], [])
 
             response = self.send_command('algorithm.add', add_params)
             algorithm_id = response['algorithm_id']
@@ -98,6 +102,7 @@ class ExcavatorServer:
         self.running_workers[device] = response['worker_id']
 
     def free_device(self, device):
+        """Stop running the active algorithm on device."""
         algorithm = [a for a in self.running_algorithms.keys() if
                      device in self.running_algorithms[a][1]][0]
         self.running_algorithms[algorithm][1].remove(device)
@@ -113,6 +118,7 @@ class ExcavatorServer:
             self.send_command('algorithm.remove', [str(algorithm_id)])
 
     def device_speeds(self, device):
+        """Get current speeds for device that is running a single algorithm."""
         algorithm = [a for a in self.running_algorithms.keys() if
                      device in self.running_algorithms[a][1]][0]
 
@@ -125,22 +131,31 @@ class ExcavatorServer:
                        wd['worker_id'] == worker_id][0]
         return worker_data['speed']
 
+    def algorithm_speeds(self, algorithm):
+        """Get sum of speeds for all devices running algorithm."""
+        response = self.send_command('algorithm.list', [])
+
+        algorithm_data = [ad for ad in response['algorithms'] if
+                          ad['name'] == algorithm][0]
+        worker_speeds = [wd['speed'] for wd in algorithm_data['workers']]
+        return [sum([ws[0] for ws in worker_speeds]),
+                sum([ws[1] for ws in worker_speeds])]
+
 class ExcavatorAlgorithm(Algorithm):
-    def __init__(self, algorithm, excavator, device):
-        super(ExcavatorAlgorithm, self).__init__('excavator_%s' % algorithm,
-                                                 algorithm.split('_'), device)
+    def __init__(self, algorithm, excavator):
+        super(ExcavatorAlgorithm, self).__init__(name='excavator_%s' % algorithm,
+                                                 algorithms=algorithm.split('_'))
 
         self.excavator = excavator
 
-    def run(self, stratums, auth):
-        self.excavator.server.dispatch_device('_'.join(self.algorithms),
-                                              stratums, auth, self.device)
+    def attach_device(self, device):
+        self.excavator.server.dispatch_device('_'.join(self.algorithms), device)
 
-    def stop(self):
-        self.excavator.server.free_device(self.device)
+    def detach_device(self, device):
+        self.excavator.server.free_device(device)
 
     def current_speeds(self):
-        speeds = self.excavator.server.device_speeds(self.device)
+        speeds = self.excavator.server.algorithm_speeds('_'.join(self.algorithms))
         if len(self.algorithms) == 2:
             return speeds
         else:
@@ -165,19 +180,19 @@ class Excavator(Miner):
         'nist5'
         ]
 
-    def __init__(self, settings, devices):
-        super(Excavator, self).__init__(settings, devices)
+    def __init__(self, settings, stratums):
+        super(Excavator, self).__init__(settings, stratums)
 
-        self.settings = settings
         self.server = None
-        for device in devices:
-            for algorithm in self.ALGORITHMS:
-                runnable = ExcavatorAlgorithm(algorithm, self, device)
-                self.algorithms[device].append(runnable)
+        for algorithm in self.ALGORITHMS:
+            runnable = ExcavatorAlgorithm(algorithm, self)
+            self.algorithms.append(runnable)
 
     def load(self):
         self.server = ExcavatorServer(self.settings['excavator']['path'],
-                                      self.settings['excavator']['port'])
+                                      self.settings['excavator']['port'],
+                                      self.stratums,
+                                      self.settings['nicehash']['wallet'])
         self.server.start()
 
     def unload(self):
