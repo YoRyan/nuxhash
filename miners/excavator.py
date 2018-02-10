@@ -87,8 +87,8 @@ class ExcavatorServer:
     def dispatch_device(self, algorithm, device):
         """Start running algorithm on device."""
         if algorithm not in self.running_algorithms:
-            add_params = [algorithm] + sum([[self.stratums[ma], self.auth] for
-                                            ma in algorithm.split('_')], [])
+            add_params = [algorithm] + sum([[self.stratums[ma], self.auth]
+                                            for ma in algorithm.split('_')], [])
 
             response = self.send_command('algorithm.add', add_params)
             algorithm_id = response['algorithm_id']
@@ -103,8 +103,8 @@ class ExcavatorServer:
 
     def free_device(self, device):
         """Stop running the active algorithm on device."""
-        algorithm = [a for a in self.running_algorithms.keys() if
-                     device in self.running_algorithms[a][1]][0]
+        algorithm = [a for a in self.running_algorithms.keys()
+                     if device in self.running_algorithms[a][1]][0]
         self.running_algorithms[algorithm][1].remove(device)
         worker_id = self.running_workers[device]
         self.running_workers.pop(device)
@@ -119,24 +119,24 @@ class ExcavatorServer:
 
     def device_speeds(self, device):
         """Get current speeds for device that is running a single algorithm."""
-        algorithm = [a for a in self.running_algorithms.keys() if
-                     device in self.running_algorithms[a][1]][0]
+        algorithm = [a for a in self.running_algorithms.keys()
+                     if device in self.running_algorithms[a][1]][0]
 
         response = self.send_command('algorithm.list', [])
 
-        algorithm_data = [ad for ad in response['algorithms'] if
-                          ad['name'] == algorithm][0]
+        algorithm_data = [ad for ad in response['algorithms']
+                          if ad['name'] == algorithm][0]
         worker_id = self.running_workers[device]
-        worker_data = [wd for wd in algorithm_data['workers'] if
-                       wd['worker_id'] == worker_id][0]
+        worker_data = [wd for wd in algorithm_data['workers']
+                       if wd['worker_id'] == worker_id][0]
         return worker_data['speed']
 
     def algorithm_speeds(self, algorithm):
         """Get sum of speeds for all devices running algorithm."""
         response = self.send_command('algorithm.list', [])
 
-        algorithm_data = [ad for ad in response['algorithms'] if
-                          ad['name'] == algorithm][0]
+        algorithm_data = [ad for ad in response['algorithms']
+                          if ad['name'] == algorithm][0]
         worker_speeds = [wd['speed'] for wd in algorithm_data['workers']]
         return [sum([ws[0] for ws in worker_speeds]),
                 sum([ws[1] for ws in worker_speeds])]

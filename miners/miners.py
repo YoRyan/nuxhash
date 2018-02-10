@@ -55,7 +55,7 @@ def run_benchmark(algorithm, device, duration):
         if len(lists) == 1:
             return head_list
         else:
-            return [head_list[i] + sum_list_elements(lists[1:])[i] for
-                    i in range(len(head_list))]
+            return [head_list[i] + sum_list_elements(lists[1:])[i]
+                    for i in range(len(head_list))]
     return map(lambda total: total/len(samples), sum_list_elements(samples))
 
