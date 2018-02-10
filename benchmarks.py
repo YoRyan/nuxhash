@@ -11,10 +11,10 @@ def read_benchmarks_from_file(fd, devices):
         benchmarks[device] = {}
         js_speeds = js[js_device]
         for algorithm in js_speeds:
-            if '_' not in algorithm:
-                benchmarks[device][algorithm] = [js_speeds[algorithm]]
-            else:
+            if isinstance(js_speeds[algorithm], list):
                 benchmarks[device][algorithm] = js_speeds[algorithm]
+            else:
+                benchmarks[device][algorithm] = [js_speeds[algorithm]]
 
     return benchmarks
 
@@ -25,7 +25,7 @@ def write_benchmarks_to_file(fd, benchmarks):
         to_file[str(device)] = {}
         speeds = benchmarks[device]
         for algorithm in speeds:
-            if len(speeds[algorithm]) > 1:
+            if len(speeds[algorithm]) == 1:
                 to_file[str(device)][algorithm] = speeds[algorithm][0]
             else:
                 to_file[str(device)][algorithm] = speeds[algorithm]
