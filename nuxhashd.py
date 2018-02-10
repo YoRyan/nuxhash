@@ -155,8 +155,8 @@ def do_mining(settings, benchmarks, devices):
                 maximum.attach_device(device)
                 current_algorithm[device] = maximum
             elif current != maximum:
-                current_revenue = mbtc_per_day(current)
-                maximum_revenue = mbtc_per_day(maximum)
+                current_revenue = mbtc_per_day(current, device)
+                maximum_revenue = mbtc_per_day(maximum, device)
                 min_factor = 1.0 + settings['switching']['threshold']
 
                 if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
