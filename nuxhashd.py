@@ -86,6 +86,7 @@ def run_all_benchmarks(settings, devices):
     algorithms = excavator.algorithms
 
     benchmarks = {}
+
     for d in sorted(devices, key=str):
         benchmarks[d] = {}
 
@@ -96,7 +97,11 @@ def run_all_benchmarks(settings, devices):
             print '  %s ... ' % a.name,
             speeds = miners.run_benchmark(a, d, BENCHMARK_SECS)
             print format_speeds(speeds)
-            benchmarks[d][a] = speeds
+            benchmarks[d][a.name] = speeds
+            break
+
+    excavator.unload()
+
     return benchmarks
 
 def format_speeds(speeds):

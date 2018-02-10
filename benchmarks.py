@@ -23,12 +23,12 @@ def write_benchmarks_to_file(fd, benchmarks):
 
     for device in benchmarks:
         to_file[str(device)] = {}
-        speeds = benchmarks[str(device)]
+        speeds = benchmarks[device]
         for algorithm in speeds:
             if len(speeds[algorithm]) > 1:
                 to_file[str(device)][algorithm] = speeds[algorithm][0]
             else:
                 to_file[str(device)][algorithm] = speeds[algorithm]
 
-    json.dump(to_file, fd)
+    json.dump(to_file, fd, indent=4)
 
