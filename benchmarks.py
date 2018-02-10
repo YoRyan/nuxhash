@@ -30,5 +30,5 @@ def write_benchmarks_to_file(fd, benchmarks):
             else:
                 to_file[str(device)][algorithm] = speeds[algorithm]
 
-    json.write(to_file, fd)
+    json.dump(to_file, fd)
 

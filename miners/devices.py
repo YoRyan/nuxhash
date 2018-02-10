@@ -13,6 +13,9 @@ class Device:
     def __hash__(self):
         return hash(self.driver) + hash(self.name) + self.index
 
+def enumerate_devices():
+    return enumerate_nvidia_devices()
+
 def enumerate_nvidia_devices():
     devices = []
     try:
