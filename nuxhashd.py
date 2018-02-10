@@ -152,7 +152,10 @@ def do_mining(settings, benchmarks, devices):
             current = current_algorithm[device]
             maximum = max(algorithms, key=lambda a: mbtc_per_day(a, device))
 
-            if current is not None and current != maximum:
+            if current is None:
+                maximum.attach_device(device)
+                current_algorithm[device] = maximum
+            elif current != maximum:
                 current_revenue = mbtc_per_day(current)
                 maximum_revenue = mbtc_per_day(maximum)
                 min_factor = 1.0 + settings['switching']['threshold']
@@ -161,9 +164,6 @@ def do_mining(settings, benchmarks, devices):
                     current.detach_device(device)
                     maximum.attach_device(device)
                     current_algorithm[device] = maximum
-            else:
-                maximum.attach_device(device)
-                current_algorithm[device] = maximum
         # wait, then query nicehash profitability data again
         sleep(settings['switching']['interval'])
         mbtc_per_hash = nicehash.simplemultialgo_info(settings)[0]
