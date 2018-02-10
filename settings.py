@@ -5,11 +5,15 @@ DEFAULT_SETTINGS = {
         'wallet': '',
         'workername': 'nuxhash',
         'region': 'usa'
-    },
+        },
     'excavator': {
         'enabled': True,
         'path': '/opt/excavator/bin/excavator',
         'port': 3456
+        },
+    'switching': {
+        'interval': 60,
+        'threshold': 0.1
         }
     }
 
@@ -35,6 +39,11 @@ def read_settings_from_file(fd):
     excavator['path'] = get_option(parser.get, 'excavator', 'path')
     excavator['port'] = get_option(parser.getint, 'excavator', 'port')
     settings['excavator'] = excavator
+
+    switching = {}
+    switching['interval'] = get_option(parser.getint, 'switching', 'interval')
+    switching['threshold'] = get_option(parser.getfloat, 'switching', 'threshold')
+    settings['switching'] = switching
 
     return settings
 

@@ -58,7 +58,7 @@ def load_persistent_data(config_dir, devices):
     except IOError as err:
         if err.errno != 2:
             raise
-        benchmarks = {}
+        benchmarks = dict([(d, {}) for d in devices])
     else:
         benchmarks = read_benchmarks_from_file(benchmarks_fd, devices)
 
@@ -129,7 +129,44 @@ def list_devices(devices):
             print 'CUDA device %d: %s' % (d.index, d.name)
 
 def do_mining(settings, benchmarks, devices):
-    pass
+    print 'Contacting NiceHash ...'
+    mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
+
+    def mbtc_per_day(algorithm, device):
+        device_benchmarks = benchmarks[device]
+        if algorithm.name in device_benchmarks:
+            mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
+                                  mbtc_per_hash[algorithm.algorithms[i]]
+                                  for i in range(len(algorithm.algorithms))]
+            return sum(mbtc_per_day_multi)
+        else:
+            return 0
+
+    excavator = miners.Excavator(settings, stratums)
+    excavator.load()
+    algorithms = excavator.algorithms
+
+    current_algorithm = dict([(d, None) for d in devices])
+    while True:
+        for device in devices:
+            current = current_algorithm[device]
+            maximum = max(algorithms, key=lambda a: mbtc_per_day(a, device))
+
+            if current is not None and current != maximum:
+                current_revenue = mbtc_per_day(current)
+                maximum_revenue = mbtc_per_day(maximum)
+                min_factor = 1.0 + settings['switching']['threshold']
+
+                if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
+                    current.detach_device(device)
+                    maximum.attach_device(device)
+                    current_algorithm[device] = maximum
+            else:
+                maximum.attach_device(device)
+                current_algorithm[device] = maximum
+        # wait, then query nicehash profitability data again
+        sleep(settings['switching']['interval'])
+        mbtc_per_hash = nicehash.simplemultialgo_info(settings)[0]
 
 if __name__ == '__main__':
     main()
