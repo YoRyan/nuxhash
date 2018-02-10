@@ -98,7 +98,6 @@ def run_all_benchmarks(settings, devices):
             speeds = miners.run_benchmark(a, d, BENCHMARK_SECS)
             print format_speeds(speeds)
             benchmarks[d][a.name] = speeds
-            break
 
     excavator.unload()
 
