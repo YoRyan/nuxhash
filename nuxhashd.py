@@ -13,7 +13,7 @@ DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
 BENCHMARKS_FILENAME = 'benchmarks.json'
 
-BENCHMARK_SECS = 120
+BENCHMARK_SECS = 30
 
 def main():
     # parse commmand-line arguments

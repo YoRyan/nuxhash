@@ -1,6 +1,6 @@
 from time import sleep
 
-BENCHMARK_WARMUP = 60
+BENCHMARK_WARMUP = 30
 BENCHMARK_SAMPLE_INTERVAL = 5
 
 class Miner(object):
