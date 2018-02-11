@@ -59,9 +59,10 @@ def main():
 
     # if no wallet configured, do initial setup prompts
     if nx_settings['nicehash']['wallet'] == '':
-        wallet, workername = initial_setup()
+        wallet, workername, region = initial_setup()
         nx_settings['nicehash']['wallet'] = wallet
         nx_settings['nicehash']['workername'] = workername
+        nx_settings['nicehash']['region'] = region
 
     if args.benchmark_all:
         nx_benchmarks = run_all_benchmarks(nx_settings, devices)
@@ -111,8 +112,11 @@ def initial_setup():
 
     wallet = raw_input('Wallet address: ')
     workername = raw_input('Worker name: ')
+    region = raw_input('Region (eu/usa/hk/jp/in/br): ')
 
-    return wallet, workername
+    print
+
+    return wallet, workername, region
 
 def run_all_benchmarks(nx_settings, devices):
     print 'Querying NiceHash for miner connection information...'

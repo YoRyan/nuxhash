@@ -23,6 +23,7 @@ $ ./nuxhashd.py --benchmark-all
 nuxhashd initial setup
 Wallet address: 3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23
 Worker name: ATXcavator
+Region (eu/usa/hk/jp/in/br): usa
 
 Querying NiceHash for miner connection information...
 
