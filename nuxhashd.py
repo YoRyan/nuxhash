@@ -6,8 +6,11 @@ import miners
 import nicehash
 
 from time import sleep
+from urllib2 import HTTPError, URLError
 import argparse
+import logging
 import os
+import socket
 
 DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
@@ -16,6 +19,10 @@ BENCHMARKS_FILENAME = 'benchmarks.json'
 BENCHMARK_SECS = 30
 
 def main():
+    # initiate logging
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.INFO)
+
     # parse commmand-line arguments
     argp = argparse.ArgumentParser(description='Sell GPU hash power on the NiceHash market.')
     argp.add_argument('-c', '--configdir', nargs=1, default=[DEFAULT_CONFIGDIR],
@@ -128,14 +135,20 @@ def list_devices(devices):
             print 'CUDA device %d: %s' % (d.index, d.name)
 
 def do_mining(settings, benchmarks, devices):
-    print 'Contacting NiceHash ...'
-    mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
+    logging.info('Querying NiceHash for algorithm port information...')
+    mbtc_per_hash = stratums = None
+    while mbtc_per_hash is None:
+        try:
+            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
+        except (HTTPError, URLError, socket.error, socket.timeout):
+            pass
+    logging.info('done')
 
     def mbtc_per_day(algorithm, device):
         device_benchmarks = benchmarks[device]
         if algorithm.name in device_benchmarks:
             mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
-                                  mbtc_per_hash[algorithm.algorithms[i]]
+                                  mbtc_per_hash[algorithm.algorithms[i]]*(24*60*60)
                                   for i in range(len(algorithm.algorithms))]
             return sum(mbtc_per_day_multi)
         else:
@@ -152,6 +165,9 @@ def do_mining(settings, benchmarks, devices):
             maximum = max(algorithms, key=lambda a: mbtc_per_day(a, device))
 
             if current is None:
+                logging.info('Assigning %s to %s (%.3f mBTC/day)' %
+                             (device, maximum.name, mbtc_per_day(maximum, device)))
+
                 maximum.attach_device(device)
                 current_algorithm[device] = maximum
             elif current != maximum:
@@ -159,13 +175,27 @@ def do_mining(settings, benchmarks, devices):
                 maximum_revenue = mbtc_per_day(maximum, device)
                 min_factor = 1.0 + settings['switching']['threshold']
 
+                logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)' %
+                             (device, current.name, maximum.name, current_revenue, maximum_revenue))
+
                 if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
                     current.detach_device(device)
                     maximum.attach_device(device)
                     current_algorithm[device] = maximum
-        # wait, then query nicehash profitability data again
         sleep(settings['switching']['interval'])
-        mbtc_per_hash = nicehash.simplemultialgo_info(settings)[0]
+        # query nicehash profitability data again
+        try:
+            mbtc_per_hash = nicehash.simplemultialgo_info(settings)[0]
+        except URLError as err:
+            logging.warning('Failed to retrieve NiceHash profitability sttas: %s' %
+                            err.reason)
+        except HTTPError as err:
+            logging.warning('Failed to retrieve NiceHash profitability stats: %s %s' %
+                            (err.code, err.reason))
+        except socket.timeout:
+            logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
+        except json.decoder.JSONDecodeError:
+            logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
 
 if __name__ == '__main__':
     main()
