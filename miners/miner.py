@@ -51,7 +51,7 @@ class Algorithm(object):
 
 def log_output(process):
     while process.poll() is None:
-        line = process.stdout.readline().strip()
+        line = process.stdout.readline().rstrip()
         if line != '':
             logging.debug(line + '\033[0m') # reset terminal colors
 
