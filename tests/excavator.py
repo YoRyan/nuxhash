@@ -1,9 +1,17 @@
 import sys
 sys.path.append('..')
 
-import miners, settings
+import miners.devices
+import miners.excavator
+import miners.miner
+import settings
+import utils
+
+import logging
 from pprint import pprint
 from time import sleep
+
+logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
 devices = miners.devices.enumerate_nvidia_devices()
 
@@ -17,7 +25,7 @@ stratums = {
 my_settings = settings.DEFAULT_SETTINGS
 my_settings['nicehash']['wallet'] = '1BQSMa5mfDNzut5PN9xgtJe3wqaqGEEerD'
 
-exc = miners.Excavator(my_settings, stratums)
+exc = miners.excavator.Excavator(my_settings, stratums)
 exc.load()
 
 ns = [a for a in exc.algorithms if a.algorithms == ['neoscrypt']][0]
@@ -26,12 +34,10 @@ sleep(10)
 ns.detach_device(devices[0])
 
 eq = [a for a in exc.algorithms if a.algorithms == ['equihash']][0]
-print 'equihash benchmark = ',
-print miners.run_benchmark(eq, devices[0], 30, 60)
+logging.info('equihash benchmark = ' + str(utils.run_benchmark(eq, devices[0], 30, 60)))
 
 dp = [a for a in exc.algorithms if a.algorithms == ['daggerhashimoto', 'pascal']][0]
-print 'daggerhash-pascal benchmark = ',
-print miners.run_benchmark(dp, devices[0], 30, 60)
+logging.info('daggerhash-pascal benchmark = ' + str(utils.run_benchmark(dp, devices[0], 30, 60)))
 
 exc.unload()
 
