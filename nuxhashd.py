@@ -175,10 +175,11 @@ def do_mining(settings, benchmarks, devices):
                 maximum_revenue = mbtc_per_day(maximum, device)
                 min_factor = 1.0 + settings['switching']['threshold']
 
-                logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)' %
-                             (device, current.name, maximum.name, current_revenue, maximum_revenue))
-
                 if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
+                    logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)' %
+                                 (device, current.name, maximum.name,
+                                  current_revenue, maximum_revenue))
+
                     current.detach_device(device)
                     maximum.attach_device(device)
                     current_algorithm[device] = maximum
