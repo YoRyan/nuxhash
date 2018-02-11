@@ -10,7 +10,9 @@ from urllib2 import HTTPError, URLError
 import argparse
 import logging
 import os
+import signal
 import socket
+import sys
 
 DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
@@ -29,13 +31,13 @@ def main():
                       help='benchmark all algorithms on all devices')
     argp.add_argument('--list-devices', action='store_true',
                       help='list all devices')
-    argp.add_argument('--show-miners', action='store_true',
+    argp.add_argument('--show-mining', action='store_true',
                       help='show output from mining programs; implies --verbose')
     args = argp.parse_args()
     config_dir = args.configdir[0]
 
     # initiate logging
-    if args.verbose or args.show_miners:
+    if args.verbose or args.show_mining:
         log_level = logging.INFO
     else:
         log_level = logging.WARN
@@ -143,6 +145,7 @@ def list_devices(devices):
             print 'CUDA device %d: %s' % (d.index, d.name)
 
 def do_mining(settings, benchmarks, devices):
+    # get algorithm -> port information for stratum URLs
     logging.info('Querying NiceHash for algorithm port information...')
     mbtc_per_hash = stratums = None
     while mbtc_per_hash is None:
@@ -151,6 +154,17 @@ def do_mining(settings, benchmarks, devices):
         except (HTTPError, URLError, socket.error, socket.timeout):
             pass
     logging.info('done')
+
+    # TODO miners more gracefully
+    excavator = miners.Excavator(settings, stratums)
+    excavator.load()
+    algorithms = excavator.algorithms
+
+    def sigint_handler(signum, frame):
+        logging.info('Cleaning up')
+        excavator.unload()
+        sys.exit(0)
+    signal.signal(signal.SIGINT, sigint_handler)
 
     def mbtc_per_day(algorithm, device):
         device_benchmarks = benchmarks[device]
@@ -161,10 +175,6 @@ def do_mining(settings, benchmarks, devices):
             return sum(mbtc_per_day_multi)
         else:
             return 0
-
-    excavator = miners.Excavator(settings, stratums)
-    excavator.load()
-    algorithms = excavator.algorithms
 
     current_algorithm = dict([(d, None) for d in devices])
     while True:

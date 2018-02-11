@@ -44,8 +44,13 @@ class ExcavatorServer(object):
         active_devices = list(self.running_workers.keys())
         for device in active_devices:
             self.free_device(device)
-        self.send_command('quit', [])
-        self.process.wait()
+        try:
+            self.send_command('quit', [])
+        except socket.error as err:
+            if err.errno != 104: # expected error: connection reset by peer
+                raise
+        else:
+            self.process.wait()
 
     def send_command(self, method, params):
         """Sends a command to excavator, returns the JSON-encoded response.
