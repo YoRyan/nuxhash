@@ -42,7 +42,7 @@ class ExcavatorServer(object):
         def log_output(process):
             while process.poll() is None:
                 line = process.stdout.readline().strip()
-                logging.debug(line)
+                logging.debug(line + '\033[0m') # reset terminal colors
         log_thread = threading.Thread(target=log_output, args=(self.process,))
         log_thread.start()
 
