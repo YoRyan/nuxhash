@@ -1,7 +1,7 @@
 import re
 import subprocess
 
-class Device:
+class Device(object):
     def __init__(self, driver, index, name):
         self.driver = driver
         self.index = index

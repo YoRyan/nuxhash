@@ -1,7 +1,7 @@
 import json
 import socket
 import subprocess
-from miners import Algorithm, Miner
+from miners import *
 from time import sleep
 
 class ExcavatorError(Exception):
@@ -13,7 +13,7 @@ class ExcavatorAPIError(ExcavatorError):
         self.response = response
         self.error = response['error']
 
-class ExcavatorServer:
+class ExcavatorServer(object):
     BUFFER_SIZE = 1024
     TIMEOUT = 10
 
@@ -32,7 +32,10 @@ class ExcavatorServer:
         """Launches excavator."""
         self.process = subprocess.Popen([self.executable,
                                          '-i', self.address[0],
-                                         '-p', str(self.address[1])])
+                                         '-p', str(self.address[1])],
+                                        stdin=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        stdout=subprocess.PIPE)
         while not self.test_connection():
             sleep(1)
 
@@ -41,7 +44,7 @@ class ExcavatorServer:
         active_devices = list(self.running_workers.keys())
         for device in active_devices:
             self.free_device(device)
-        self.process.terminate()
+        self.send_command('quit', [])
         self.process.wait()
 
     def send_command(self, method, params):
@@ -142,24 +145,34 @@ class ExcavatorServer:
                 sum([ws[1] for ws in worker_speeds])]
 
 class ExcavatorAlgorithm(Algorithm):
-    def __init__(self, algorithm, excavator):
-        super(ExcavatorAlgorithm, self).__init__(name='excavator_%s' % algorithm,
+    def __init__(self, miner, algorithm):
+        super(ExcavatorAlgorithm, self).__init__(miner,
+                                                 name='excavator_%s' % algorithm,
                                                  algorithms=algorithm.split('_'))
-
-        self.excavator = excavator
+        pass
 
     def attach_device(self, device):
-        self.excavator.server.dispatch_device('_'.join(self.algorithms), device)
+        try:
+            self.miner.server.dispatch_device('_'.join(self.algorithms), device)
+        except (socket.error, socket.timeout):
+            raise MinerNotRunning('could not connect to excavator')
 
     def detach_device(self, device):
-        self.excavator.server.free_device(device)
+        try:
+            self.miner.server.free_device(device)
+        except (socket.error, socket.timeout):
+            raise MinerNotRunning('could not connect to excavator')
 
     def current_speeds(self):
-        speeds = self.excavator.server.algorithm_speeds('_'.join(self.algorithms))
-        if len(self.algorithms) == 2:
-            return speeds
+        try:
+            speeds = self.miner.server.algorithm_speeds('_'.join(self.algorithms))
+        except (socket.error, socket.timeout):
+            raise MinerNotRunning('could not connect to excavator')
         else:
-            return speeds[:1]
+            if len(self.algorithms) == 2:
+                return speeds
+            else:
+                return speeds[:1]
 
 class Excavator(Miner):
     ALGORITHMS = [
@@ -185,7 +198,7 @@ class Excavator(Miner):
 
         self.server = None
         for algorithm in self.ALGORITHMS:
-            runnable = ExcavatorAlgorithm(algorithm, self)
+            runnable = ExcavatorAlgorithm(self, algorithm)
             self.algorithms.append(runnable)
 
     def load(self):

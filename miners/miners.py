@@ -3,6 +3,25 @@ from time import sleep
 BENCHMARK_WARMUP = 30
 BENCHMARK_SAMPLE_INTERVAL = 5
 
+class MinerException(Exception):
+    pass
+
+class MinerStartFailed(MinerException):
+    def __init__(self, failure):
+        self.failure = failure
+
+class MinerNotRunning(MinerException):
+    def __init__(self, failure):
+        self.failure = failure
+
+class AlgorithmStartFailed(MinerException):
+    def __init__(self, failure):
+        self.failure = failure
+
+class AlgorithmNotRunning(MinerException):
+    def __init__(self, failure):
+        self.failure = failure
+
 class Miner(object):
     def __init__(self, settings, stratums):
         # list of runnable algorithms supplied by this miner
@@ -19,7 +38,8 @@ class Miner(object):
         pass
 
 class Algorithm(object):
-    def __init__(self, name, algorithms):
+    def __init__(self, miner, name, algorithms):
+        self.miner = miner
         # human-readable name for the benchmark records
         self.name = name
         # list of algorithms run (for multialgorithms; same order as reported
