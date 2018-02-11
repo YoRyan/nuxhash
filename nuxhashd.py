@@ -51,6 +51,12 @@ def main():
     # load from config directory
     settings, benchmarks = load_persistent_data(config_dir, devices)
 
+    # if no wallet configured, do initial setup prompts
+    if settings['nicehash']['wallet'] == '':
+        wallet, workername = initial_setup()
+        settings['nicehash']['wallet'] = wallet
+        settings['nicehash']['workername'] = workername
+
     if args.benchmark_all:
         benchmarks = run_all_benchmarks(settings, devices)
     elif args.list_devices:
@@ -93,6 +99,17 @@ def save_persistent_data(config_dir, settings, benchmarks):
                            settings)
     write_benchmarks_to_file(open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'w'),
                              benchmarks)
+
+def initial_setup():
+    print 'nuxhashd initial setup'
+
+    print 'Wallet address:',
+    wallet = raw_input()
+
+    print 'Worker name:',
+    workername = raw_input()
+
+    return wallet, workername
 
 def run_all_benchmarks(settings, devices):
     print 'Contacting NiceHash ...'
