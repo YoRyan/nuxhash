@@ -7,6 +7,7 @@ import nicehash
 import settings
 import utils
 
+from threading import Event
 from time import sleep
 from urllib2 import HTTPError, URLError
 import argparse
@@ -181,14 +182,14 @@ def do_mining(nx_settings, nx_benchmarks, devices):
     excavator.load()
     algorithms = excavator.algorithms
 
+    # quit signal
+    quit = Event()
     def sigint_handler(signum, frame):
-        logging.info('Cleaning up')
-        excavator.unload()
-        sys.exit(0)
-    signal.signal(signal.SIGINT, sigint_handler)
+        quit.set()
+    signal.signal(signal.SIGINT, lambda signum, frame: quit.set())
 
     current_algorithm = dict([(d, None) for d in devices])
-    while True:
+    while not quit.is_set():
         for device in devices:
             def mbtc_per_day(algorithm):
                 device_benchmarks = nx_benchmarks[device]
@@ -222,7 +223,8 @@ def do_mining(nx_settings, nx_benchmarks, devices):
                     current.detach_device(device)
                     maximum.attach_device(device)
                     current_algorithm[device] = maximum
-        sleep(nx_settings['switching']['interval'])
+        # wait for specified interval
+        quit.wait(nx_settings['switching']['interval'])
         # query nicehash profitability data again
         try:
             mbtc_per_hash = nicehash.simplemultialgo_info(nx_settings)[0]
@@ -236,6 +238,9 @@ def do_mining(nx_settings, nx_benchmarks, devices):
             logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
         except json.decoder.JSONDecodeError:
             logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
+
+    logging.info('Cleaning up')
+    excavator.unload()
 
 if __name__ == '__main__':
     main()
