@@ -1,8 +1,9 @@
+import miner
+
 import json
 import socket
 import subprocess
 import threading
-from miners import *
 from time import sleep
 
 class ExcavatorError(Exception):
@@ -38,14 +39,14 @@ class ExcavatorServer(object):
                                         stderr=subprocess.STDOUT,
                                         stdout=subprocess.PIPE)
         # send stdout to logger
-        log_thread = threading.Thread(target=log_output, args=(self.process,))
+        log_thread = threading.Thread(target=miner.log_output, args=(self.process,))
         log_thread.start()
 
         while not self.test_connection():
             if self.process.poll() is None:
                 sleep(1)
             else:
-                raise MinerStartFailed
+                raise miner.MinerStartFailed
 
     def stop(self):
         """Stops excavator."""
@@ -156,37 +157,37 @@ class ExcavatorServer(object):
         return [sum([ws[0] for ws in worker_speeds]),
                 sum([ws[1] for ws in worker_speeds])]
 
-class ExcavatorAlgorithm(Algorithm):
-    def __init__(self, miner, algorithm):
-        super(ExcavatorAlgorithm, self).__init__(miner,
+class ExcavatorAlgorithm(miner.Algorithm):
+    def __init__(self, parent, algorithm):
+        super(ExcavatorAlgorithm, self).__init__(parent,
                                                  name='excavator_%s' % algorithm,
                                                  algorithms=algorithm.split('_'))
         pass
 
     def attach_device(self, device):
         try:
-            self.miner.server.dispatch_device('_'.join(self.algorithms), device)
+            self.parent.server.dispatch_device('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
-            raise MinerNotRunning('could not connect to excavator')
+            raise miner.MinerNotRunning('could not connect to excavator')
 
     def detach_device(self, device):
         try:
-            self.miner.server.free_device(device)
+            self.parent.server.free_device(device)
         except (socket.error, socket.timeout):
-            raise MinerNotRunning('could not connect to excavator')
+            raise miner.MinerNotRunning('could not connect to excavator')
 
     def current_speeds(self):
         try:
-            speeds = self.miner.server.algorithm_speeds('_'.join(self.algorithms))
+            speeds = self.parent.server.algorithm_speeds('_'.join(self.algorithms))
         except (socket.error, socket.timeout):
-            raise MinerNotRunning('could not connect to excavator')
+            raise miner.MinerNotRunning('could not connect to excavator')
         else:
             if len(self.algorithms) == 2:
                 return speeds
             else:
                 return speeds[:1]
 
-class Excavator(Miner):
+class Excavator(miner.Miner):
     ALGORITHMS = [
         'equihash',
         'pascal',

@@ -1,6 +1,6 @@
 import json
 
-def read_benchmarks_from_file(fd, devices):
+def read_from_file(fd, devices):
     benchmarks = {}
     js = json.load(fd, 'ascii')
 
@@ -18,7 +18,7 @@ def read_benchmarks_from_file(fd, devices):
 
     return benchmarks
 
-def write_benchmarks_to_file(fd, benchmarks):
+def write_to_file(fd, benchmarks):
     to_file = {}
 
     for device in benchmarks:

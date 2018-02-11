@@ -1,9 +1,10 @@
 #!/usr/bin/env python2
 
-from benchmarks import *
-from settings import *
-import miners
+import benchmarks
+import miners.devices
+import miners.excavator
 import nicehash
+import settings
 import utils
 
 from time import sleep
@@ -51,26 +52,26 @@ def main():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log_level)
 
     # probe graphics cards
-    devices = miners.enumerate_devices()
+    devices = miners.devices.enumerate_devices()
 
     # load from config directory
-    settings, benchmarks = load_persistent_data(config_dir, devices)
+    nx_settings, nx_benchmarks = load_persistent_data(config_dir, devices)
 
     # if no wallet configured, do initial setup prompts
-    if settings['nicehash']['wallet'] == '':
+    if nx_settings['nicehash']['wallet'] == '':
         wallet, workername = initial_setup()
-        settings['nicehash']['wallet'] = wallet
-        settings['nicehash']['workername'] = workername
+        nx_settings['nicehash']['wallet'] = wallet
+        nx_settings['nicehash']['workername'] = workername
 
     if args.benchmark_all:
-        benchmarks = run_all_benchmarks(settings, devices)
+        nx_benchmarks = run_all_benchmarks(nx_settings, devices)
     elif args.list_devices:
         list_devices(devices)
     else:
-        do_mining(settings, benchmarks, devices)
+        do_mining(nx_settings, nx_benchmarks, devices)
 
     # save to config directory
-    save_persistent_data(config_dir, settings, benchmarks)
+    save_persistent_data(config_dir, nx_settings, nx_benchmarks)
 
 def load_persistent_data(config_dir, devices):
     try:
@@ -78,32 +79,32 @@ def load_persistent_data(config_dir, devices):
     except IOError as err:
         if err.errno != 2: # file not found
             raise
-        settings = DEFAULT_SETTINGS
+        nx_settings = settings.DEFAULT_SETTINGS
     else:
-        settings = read_settings_from_file(settings_fd)
+        nx_settings = settings.read_from_file(settings_fd)
 
     try:
         benchmarks_fd = open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'r')
     except IOError as err:
         if err.errno != 2:
             raise
-        benchmarks = dict([(d, {}) for d in devices])
+        nx_benchmarks = dict([(d, {}) for d in devices])
     else:
-        benchmarks = read_benchmarks_from_file(benchmarks_fd, devices)
+        nx_benchmarks = benchmarks.read_from_file(benchmarks_fd, devices)
 
-    return settings, benchmarks
+    return nx_settings, nx_benchmarks
 
-def save_persistent_data(config_dir, settings, benchmarks):
+def save_persistent_data(config_dir, nx_settings, nx_benchmarks):
     try:
         os.makedirs(config_dir)
     except OSError:
         if not os.path.isdir(config_dir):
             raise
 
-    write_settings_to_file(open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'w'),
-                           settings)
-    write_benchmarks_to_file(open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'w'),
-                             benchmarks)
+    settings.write_to_file(open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'w'),
+                           nx_settings)
+    benchmarks.write_to_file(open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'w'),
+                             nx_benchmarks)
 
 def initial_setup():
     print 'nuxhashd initial setup'
@@ -113,18 +114,18 @@ def initial_setup():
 
     return wallet, workername
 
-def run_all_benchmarks(settings, devices):
+def run_all_benchmarks(nx_settings, devices):
     print 'Querying NiceHash for miner connection information...'
-    stratums = nicehash.simplemultialgo_info(settings)[1]
+    stratums = nicehash.simplemultialgo_info(nx_settings)[1]
 
     # TODO manage miners more gracefully
-    excavator = miners.Excavator(settings, stratums)
+    excavator = miners.excavator.Excavator(nx_settings, stratums)
     excavator.load()
     algorithms = excavator.algorithms
 
-    benchmarks = {}
+    nx_benchmarks = {}
     for device in sorted(devices, key=str):
-        benchmarks[device] = {}
+        nx_benchmarks[device] = {}
 
         if device.driver == 'nvidia':
             print '\nCUDA device %d: %s' % (device.index, device.name)
@@ -145,34 +146,34 @@ def run_all_benchmarks(settings, devices):
                             utils.format_time(secs_remaining))),
                 sys.stdout.flush()
 
-            average_speeds = miners.run_benchmark(algorithm, device,
-                                                  BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
-                                                  sample_callback=report_speeds)
-            benchmarks[device][algorithm.name] = average_speeds
+            average_speeds = utils.run_benchmark(algorithm, device,
+                                                 BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
+                                                 sample_callback=report_speeds)
+            nx_benchmarks[device][algorithm.name] = average_speeds
             print '  %s: %s                      ' % (algorithm.name,
                                                       utils.format_speeds(average_speeds))
 
     excavator.unload()
 
-    return benchmarks
+    return nx_benchmarks
 
 def list_devices(devices):
     for d in sorted(devices, key=str):
         if d.driver == 'nvidia':
             print 'CUDA device %d: %s' % (d.index, d.name)
 
-def do_mining(settings, benchmarks, devices):
+def do_mining(nx_settings, nx_benchmarks, devices):
     # get algorithm -> port information for stratum URLs
     logging.info('Querying NiceHash for miner connection information...')
     mbtc_per_hash = stratums = None
     while mbtc_per_hash is None:
         try:
-            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
+            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
         except (HTTPError, URLError, socket.error, socket.timeout):
             pass
 
     # TODO manage miners more gracefully
-    excavator = miners.Excavator(settings, stratums)
+    excavator = miners.excavator.Excavator(nx_settings, stratums)
     excavator.load()
     algorithms = excavator.algorithms
 
@@ -186,7 +187,7 @@ def do_mining(settings, benchmarks, devices):
     while True:
         for device in devices:
             def mbtc_per_day(algorithm):
-                device_benchmarks = benchmarks[device]
+                device_benchmarks = nx_benchmarks[device]
                 if algorithm.name in device_benchmarks:
                     mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
                                           mbtc_per_hash[algorithm.algorithms[i]]*(24*60*60)
@@ -207,7 +208,7 @@ def do_mining(settings, benchmarks, devices):
             elif current != maximum:
                 current_revenue = mbtc_per_day(current)
                 maximum_revenue = mbtc_per_day(maximum)
-                min_factor = 1.0 + settings['switching']['threshold']
+                min_factor = 1.0 + nx_settings['switching']['threshold']
 
                 if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
                     logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)' %
@@ -217,10 +218,10 @@ def do_mining(settings, benchmarks, devices):
                     current.detach_device(device)
                     maximum.attach_device(device)
                     current_algorithm[device] = maximum
-        sleep(settings['switching']['interval'])
+        sleep(nx_settings['switching']['interval'])
         # query nicehash profitability data again
         try:
-            mbtc_per_hash = nicehash.simplemultialgo_info(settings)[0]
+            mbtc_per_hash = nicehash.simplemultialgo_info(nx_settings)[0]
         except URLError as err:
             logging.warning('Failed to retrieve NiceHash profitability sttas: %s' %
                             err.reason)

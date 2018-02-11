@@ -17,7 +17,7 @@ DEFAULT_SETTINGS = {
         }
     }
 
-def read_settings_from_file(fd):
+def read_from_file(fd):
     settings = {}
     parser = ConfigParser.SafeConfigParser()
     parser.readfp(fd)
@@ -47,7 +47,7 @@ def read_settings_from_file(fd):
 
     return settings
 
-def write_settings_to_file(fd, settings):
+def write_to_file(fd, settings):
     parser = ConfigParser.SafeConfigParser()
 
     for section in settings:

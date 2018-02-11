@@ -1,7 +1,4 @@
-from time import sleep
 import logging
-
-BENCHMARK_SAMPLE_INTERVAL = 1
 
 class MinerException(Exception):
     pass
@@ -30,8 +27,8 @@ class Miner(object):
         pass
 
 class Algorithm(object):
-    def __init__(self, miner, name, algorithms):
-        self.miner = miner
+    def __init__(self, parent, name, algorithms):
+        self.parent = parent
         # human-readable name for the benchmark records
         self.name = name
         # list of algorithms run (for multialgorithms; same order as reported
@@ -51,38 +48,6 @@ class Algorithm(object):
 
     def current_speeds(self):
         pass
-
-def run_benchmark(algorithm, device, warmup_duration, sample_duration,
-                  sample_callback=lambda sample, secs_remaining: None):
-    """Run algorithm on device for duration seconds and report the average speed.
-
-    Keyword arguments:
-    sample_callback -- called whenever a sample is taken;
-                       secs_remaining < 0 indicates warmup period
-    """
-    algorithm.attach_device(device)
-    # warmup period
-    for i in range(warmup_duration/BENCHMARK_SAMPLE_INTERVAL):
-        sample = algorithm.current_speeds()
-        sample_callback(sample, i*BENCHMARK_SAMPLE_INTERVAL - warmup_duration)
-        sleep(BENCHMARK_SAMPLE_INTERVAL)
-    # actual sampling
-    samples = []
-    for i in range(sample_duration/BENCHMARK_SAMPLE_INTERVAL):
-        sample = algorithm.current_speeds()
-        samples.append(sample)
-        sample_callback(sample, sample_duration - i*BENCHMARK_SAMPLE_INTERVAL)
-        sleep(BENCHMARK_SAMPLE_INTERVAL)
-    algorithm.detach_device(device)
-
-    # return average of all samples
-    def sum_list_elements(lists):
-        sums = lists[0]
-        for l in lists[1:]:
-            for i, e in enumerate(l):
-                sums[i] += e
-        return sums
-    return map(lambda total: total/len(samples), sum_list_elements(samples))
 
 def log_output(process):
     while process.poll() is None:
