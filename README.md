@@ -5,8 +5,8 @@ nuxhash currently consists of a lightweight daemon, nuxhashd, that manages miner
 and selects the most profitable algorithm for you. Only Nvidia devices and
 [NiceHash excavator](https://github.com/nicehash/excavator) are supported.
 
-In the future, there will be support for AMD devices, a GUI version, and an
-opt-out 0.5% donation fee.
+In the future, there will be support for AMD devices, more miners, a GUI version,
+and an opt-out 0.5% donation fee.
 
 What will never be implemented: Overclocking control, though a hook will probably
 be added to run your own scripts when changing algorithms.
