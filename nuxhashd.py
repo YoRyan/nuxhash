@@ -4,6 +4,7 @@ from benchmarks import *
 from settings import *
 import miners
 import nicehash
+import utils
 
 from time import sleep
 from urllib2 import HTTPError, URLError
@@ -19,6 +20,7 @@ DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
 BENCHMARKS_FILENAME = 'benchmarks.json'
 
+BENCHMARK_WARMUP_SECS = 240
 BENCHMARK_SECS = 60
 
 def main():
@@ -133,43 +135,26 @@ def run_all_benchmarks(settings, devices):
                 status_dot[0] = (status_dot[0] + 1) % 3
                 status_line = ''.join(['.' if i == status_dot[0] else ' '
                                        for i in range(3)])
-                if secs_remaining == -1:
-                    print ('  %s %s %s (warming up)           \r' %
-                           (algorithm.name, status_line, format_speeds(sample))),
+                if secs_remaining < 0:
+                    print ('  %s %s %s (warming up, %s)\r' %
+                           (algorithm.name, status_line, utils.format_speeds(sample),
+                            utils.format_time(-secs_remaining))),
                 else:
-                    print ('  %s %s %s (%2d seconds remaining)\r' %
-                           (algorithm.name, status_line, format_speeds(sample),
-                            secs_remaining)),
+                    print ('  %s %s %s (sampling, %s)  \r' %
+                           (algorithm.name, status_line, utils.format_speeds(sample),
+                            utils.format_time(secs_remaining))),
                 sys.stdout.flush()
 
-            average_speeds = miners.run_benchmark(algorithm, device, BENCHMARK_SECS,
+            average_speeds = miners.run_benchmark(algorithm, device,
+                                                  BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
                                                   sample_callback=report_speeds)
             benchmarks[device][algorithm.name] = average_speeds
-            print '  %s: %s                          ' % (algorithm.name,
-                                                          format_speeds(average_speeds))
+            print '  %s: %s                      ' % (algorithm.name,
+                                                      utils.format_speeds(average_speeds))
 
     excavator.unload()
 
     return benchmarks
-
-def format_speeds(speeds):
-    def format_speed(x):
-        if x >= 1e18:
-            return '%6.2f EH/s' % (x/1e18)
-        elif x >= 1e15:
-            return '%6.2f PH/s' % (x/1e15)
-        elif x >= 1e12:
-            return '%6.2f TH/s' % (x/1e12)
-        elif x >= 1e9:
-            return '%6.2f GH/s' % (x/1e9)
-        elif x >= 1e6:
-            return '%6.2f MH/s' % (x/1e6)
-        elif x >= 1e3:
-            return '%6.2f kH/s' % (x/1e3)
-        else:
-            return '%6.2f  H/s' % x
-
-    return ', '.join([format_speed(s) for s in speeds])
 
 def list_devices(devices):
     for d in sorted(devices, key=str):

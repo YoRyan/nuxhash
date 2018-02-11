@@ -27,11 +27,11 @@ ns.detach_device(devices[0])
 
 eq = [a for a in exc.algorithms if a.algorithms == ['equihash']][0]
 print 'equihash benchmark = ',
-print miners.run_benchmark(eq, devices[0], 60)
+print miners.run_benchmark(eq, devices[0], 30, 60)
 
 dp = [a for a in exc.algorithms if a.algorithms == ['daggerhashimoto', 'pascal']][0]
 print 'daggerhash-pascal benchmark = ',
-print miners.run_benchmark(dp, devices[0], 60)
+print miners.run_benchmark(dp, devices[0], 30, 60)
 
 exc.unload()
 
