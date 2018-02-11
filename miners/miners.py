@@ -1,4 +1,5 @@
 from time import sleep
+import logging
 
 BENCHMARK_WARMUP = 30
 BENCHMARK_SAMPLE_INTERVAL = 5
@@ -70,4 +71,10 @@ def run_benchmark(algorithm, device, duration):
             return [head_list[i] + sum_list_elements(lists[1:])[i]
                     for i in range(len(head_list))]
     return map(lambda total: total/len(samples), sum_list_elements(samples))
+
+def log_output(process):
+    while process.poll() is None:
+        line = process.stdout.readline().strip()
+        if line != '':
+            logging.debug(line + '\033[0m') # reset terminal colors
 
