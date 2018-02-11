@@ -219,10 +219,12 @@ class Excavator(Miner):
             self.algorithms.append(runnable)
 
     def load(self):
+        auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
+                            self.settings['nicehash']['workername'])
         self.server = ExcavatorServer(self.settings['excavator']['path'],
                                       self.settings['excavator']['port'],
                                       self.stratums,
-                                      self.settings['nicehash']['wallet'])
+                                      auth)
         self.server.start()
 
     def unload(self):
