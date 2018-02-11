@@ -1,6 +1,8 @@
 import json
+import logging
 import socket
 import subprocess
+import threading
 from miners import *
 from time import sleep
 
@@ -36,14 +38,23 @@ class ExcavatorServer(object):
                                         stdin=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         stdout=subprocess.PIPE)
+        # send stdout to logger
+        def log_output(process):
+            while process.poll() is None:
+                line = process.stdout.readline().strip()
+                logging.debug(line)
+        log_thread = threading.Thread(target=log_output, args=(self.process,))
+        log_thread.start()
+
         while not self.test_connection():
-            sleep(1)
+            if self.process.poll() is None:
+                sleep(1)
+            else:
+                raise MinerStartFailed
 
     def stop(self):
         """Stops excavator."""
-        active_devices = list(self.running_workers.keys())
-        for device in active_devices:
-            self.free_device(device)
+        self.running_workers = {}
         try:
             self.send_command('quit', [])
         except socket.error as err:
@@ -51,6 +62,7 @@ class ExcavatorServer(object):
                 raise
         else:
             self.process.wait()
+            self.stdout = None
 
     def send_command(self, method, params):
         """Sends a command to excavator, returns the JSON-encoded response.

@@ -14,14 +14,6 @@ class MinerNotRunning(MinerException):
     def __init__(self, failure):
         self.failure = failure
 
-class AlgorithmStartFailed(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
-
-class AlgorithmNotRunning(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
-
 class Miner(object):
     def __init__(self, settings, stratums):
         # list of runnable algorithms supplied by this miner

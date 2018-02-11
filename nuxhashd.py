@@ -37,12 +37,13 @@ def main():
     config_dir = args.configdir[0]
 
     # initiate logging
-    if args.verbose or args.show_mining:
+    if args.show_mining:
+        log_level = logging.DEBUG
+    elif args.verbose:
         log_level = logging.INFO
     else:
         log_level = logging.WARN
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
-                        level=log_level)
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log_level)
 
     # probe graphics cards
     devices = miners.enumerate_devices()
@@ -153,9 +154,8 @@ def do_mining(settings, benchmarks, devices):
             mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
         except (HTTPError, URLError, socket.error, socket.timeout):
             pass
-    logging.info('done')
 
-    # TODO miners more gracefully
+    # TODO manage miners more gracefully
     excavator = miners.Excavator(settings, stratums)
     excavator.load()
     algorithms = excavator.algorithms
