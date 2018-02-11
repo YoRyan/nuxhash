@@ -197,31 +197,31 @@ def do_mining(settings, benchmarks, devices):
         sys.exit(0)
     signal.signal(signal.SIGINT, sigint_handler)
 
-    def mbtc_per_day(algorithm, device):
-        device_benchmarks = benchmarks[device]
-        if algorithm.name in device_benchmarks:
-            mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
-                                  mbtc_per_hash[algorithm.algorithms[i]]*(24*60*60)
-                                  for i in range(len(algorithm.algorithms))]
-            return sum(mbtc_per_day_multi)
-        else:
-            return 0
-
     current_algorithm = dict([(d, None) for d in devices])
     while True:
         for device in devices:
+            def mbtc_per_day(algorithm):
+                device_benchmarks = benchmarks[device]
+                if algorithm.name in device_benchmarks:
+                    mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
+                                          mbtc_per_hash[algorithm.algorithms[i]]*(24*60*60)
+                                          for i in range(len(algorithm.algorithms))]
+                    return sum(mbtc_per_day_multi)
+                else:
+                    return 0
+
             current = current_algorithm[device]
-            maximum = max(algorithms, key=lambda a: mbtc_per_day(a, device))
+            maximum = max(algorithms, key=lambda a: mbtc_per_day(a))
 
             if current is None:
                 logging.info('Assigning %s to %s (%.3f mBTC/day)' %
-                             (device, maximum.name, mbtc_per_day(maximum, device)))
+                             (device, maximum.name, mbtc_per_day(maximum)))
 
                 maximum.attach_device(device)
                 current_algorithm[device] = maximum
             elif current != maximum:
-                current_revenue = mbtc_per_day(current, device)
-                maximum_revenue = mbtc_per_day(maximum, device)
+                current_revenue = mbtc_per_day(current)
+                maximum_revenue = mbtc_per_day(maximum)
                 min_factor = 1.0 + settings['switching']['threshold']
 
                 if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
