@@ -19,20 +19,28 @@ BENCHMARKS_FILENAME = 'benchmarks.json'
 BENCHMARK_SECS = 30
 
 def main():
-    # initiate logging
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
-                        level=logging.INFO)
-
     # parse commmand-line arguments
     argp = argparse.ArgumentParser(description='Sell GPU hash power on the NiceHash market.')
     argp.add_argument('-c', '--configdir', nargs=1, default=[DEFAULT_CONFIGDIR],
                       help='directory for configuration and benchmark files')
+    argp.add_argument('-v', '--verbose', action='store_true',
+                      help='print more information to the console log')
     argp.add_argument('--benchmark-all', action='store_true',
                       help='benchmark all algorithms on all devices')
     argp.add_argument('--list-devices', action='store_true',
                       help='list all devices')
+    argp.add_argument('--show-miners', action='store_true',
+                      help='show output from mining programs; implies --verbose')
     args = argp.parse_args()
     config_dir = args.configdir[0]
+
+    # initiate logging
+    if args.verbose or args.show_miners:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARN
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                        level=log_level)
 
     # probe graphics cards
     devices = miners.enumerate_devices()
