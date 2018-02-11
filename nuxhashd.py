@@ -28,7 +28,7 @@ def main():
     # parse commmand-line arguments
     argp = argparse.ArgumentParser(description='Sell GPU hash power on the NiceHash market.')
     argp.add_argument('-c', '--configdir', nargs=1, default=[DEFAULT_CONFIGDIR],
-                      help='directory for configuration and benchmark files')
+                      help='directory for configuration and benchmark files (default: ~/.config/nuxhash/)')
     argp.add_argument('-v', '--verbose', action='store_true',
                       help='print more information to the console log')
     argp.add_argument('--benchmark-all', action='store_true',
@@ -36,7 +36,7 @@ def main():
     argp.add_argument('--list-devices', action='store_true',
                       help='list all devices')
     argp.add_argument('--show-mining', action='store_true',
-                      help='show output from mining programs; implies --verbose')
+                      help='print output from mining processes, implies --verbose')
     args = argp.parse_args()
     config_dir = args.configdir[0]
 
