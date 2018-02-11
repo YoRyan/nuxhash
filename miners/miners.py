@@ -1,7 +1,7 @@
 from time import sleep
 import logging
 
-BENCHMARK_WARMUP = 120
+BENCHMARK_WARMUP = 240
 BENCHMARK_SAMPLE_INTERVAL = 1
 
 class MinerException(Exception):
@@ -78,12 +78,11 @@ def run_benchmark(algorithm, device, duration,
 
     # return average of all samples
     def sum_list_elements(lists):
-        head_list = lists[0]
-        if len(lists) == 1:
-            return head_list
-        else:
-            return [head_list[i] + sum_list_elements(lists[1:])[i]
-                    for i in range(len(head_list))]
+        sums = lists[0]
+        for l in lists[1:]:
+            for i, e in enumerate(l):
+                sums[i] += e
+        return sums
     return map(lambda total: total/len(samples), sum_list_elements(samples))
 
 def log_output(process):
