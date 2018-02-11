@@ -19,7 +19,7 @@ DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
 BENCHMARKS_FILENAME = 'benchmarks.json'
 
-BENCHMARK_SECS = 30
+BENCHMARK_SECS = 60
 
 def main():
     # parse commmand-line arguments
@@ -38,7 +38,9 @@ def main():
     config_dir = args.configdir[0]
 
     # initiate logging
-    if args.show_mining:
+    if args.benchmark_all:
+        log_level = logging.ERROR
+    elif args.show_mining:
         log_level = logging.DEBUG
     elif args.verbose:
         log_level = logging.INFO
@@ -110,27 +112,41 @@ def initial_setup():
     return wallet, workername
 
 def run_all_benchmarks(settings, devices):
-    print 'Contacting NiceHash ...'
+    print 'Querying NiceHash for miner connection information...'
     stratums = nicehash.simplemultialgo_info(settings)[1]
-    print
 
+    # TODO manage miners more gracefully
     excavator = miners.Excavator(settings, stratums)
     excavator.load()
     algorithms = excavator.algorithms
 
     benchmarks = {}
+    for device in sorted(devices, key=str):
+        benchmarks[device] = {}
 
-    for d in sorted(devices, key=str):
-        benchmarks[d] = {}
+        if device.driver == 'nvidia':
+            print '\nCUDA device %d: %s' % (device.index, device.name)
 
-        if d.driver == 'nvidia':
-            print 'CUDA device %d: %s' % (d.index, d.name)
+        for algorithm in algorithms:
+            status_dot = [-1]
+            def report_speeds(sample, secs_remaining):
+                status_dot[0] = (status_dot[0] + 1) % 3
+                status_line = ''.join(['.' if i == status_dot[0] else ' '
+                                       for i in range(3)])
+                if secs_remaining == -1:
+                    print ('  %s %s %s (warming up)           \r' %
+                           (algorithm.name, status_line, format_speeds(sample))),
+                else:
+                    print ('  %s %s %s (%2d seconds remaining)\r' %
+                           (algorithm.name, status_line, format_speeds(sample),
+                            secs_remaining)),
+                sys.stdout.flush()
 
-        for a in algorithms:
-            print '  %s ... ' % a.name,
-            speeds = miners.run_benchmark(a, d, BENCHMARK_SECS)
-            print format_speeds(speeds)
-            benchmarks[d][a.name] = speeds
+            average_speeds = miners.run_benchmark(algorithm, device, BENCHMARK_SECS,
+                                                  sample_callback=report_speeds)
+            benchmarks[device][algorithm.name] = average_speeds
+            print '  %s: %s                          ' % (algorithm.name,
+                                                          format_speeds(average_speeds))
 
     excavator.unload()
 
@@ -139,19 +155,19 @@ def run_all_benchmarks(settings, devices):
 def format_speeds(speeds):
     def format_speed(x):
         if x >= 1e18:
-            return '%.2f EH/s' % (x/1e18)
+            return '%6.2f EH/s' % (x/1e18)
         elif x >= 1e15:
-            return '%.2f PH/s' % (x/1e15)
+            return '%6.2f PH/s' % (x/1e15)
         elif x >= 1e12:
-            return '%.2f TH/s' % (x/1e12)
+            return '%6.2f TH/s' % (x/1e12)
         elif x >= 1e9:
-            return '%.2f GH/s' % (x/1e9)
+            return '%6.2f GH/s' % (x/1e9)
         elif x >= 1e6:
-            return '%.2f MH/s' % (x/1e6)
+            return '%6.2f MH/s' % (x/1e6)
         elif x >= 1e3:
-            return '%.2f kH/s' % (x/1e3)
+            return '%6.2f kH/s' % (x/1e3)
         else:
-            return '%.2f H/s' % x
+            return '%6.2f  H/s' % x
 
     return ', '.join([format_speed(s) for s in speeds])
 
@@ -162,7 +178,7 @@ def list_devices(devices):
 
 def do_mining(settings, benchmarks, devices):
     # get algorithm -> port information for stratum URLs
-    logging.info('Querying NiceHash for algorithm port information...')
+    logging.info('Querying NiceHash for miner connection information...')
     mbtc_per_hash = stratums = None
     while mbtc_per_hash is None:
         try:

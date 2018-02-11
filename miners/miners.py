@@ -1,8 +1,8 @@
 from time import sleep
 import logging
 
-BENCHMARK_WARMUP = 30
-BENCHMARK_SAMPLE_INTERVAL = 5
+BENCHMARK_WARMUP = 15
+BENCHMARK_SAMPLE_INTERVAL = 1
 
 class MinerException(Exception):
     pass
@@ -53,16 +53,30 @@ class Algorithm(object):
     def current_speeds(self):
         pass
 
-def run_benchmark(algorithm, device, duration):
-    """Run algorithm on device for duration seconds and report the average speed."""
-    samples = []
+def run_benchmark(algorithm, device, duration,
+                  sample_callback=lambda sample, secs_remaining: None):
+    """Run algorithm on device for duration seconds and report the average speed.
+
+    Keyword arguments:
+    sample_callback -- called whenever a sample is taken;
+                       (secs_remaining == -1) => still warming up
+    """
     algorithm.attach_device(device)
-    sleep(BENCHMARK_WARMUP)
+    # warmup period
+    for i in range(BENCHMARK_WARMUP/BENCHMARK_SAMPLE_INTERVAL):
+        sample = algorithm.current_speeds()
+        sample_callback(sample, -1)
+        sleep(BENCHMARK_SAMPLE_INTERVAL)
+    # actual sampling
+    samples = []
     for i in range(duration/BENCHMARK_SAMPLE_INTERVAL):
-        samples.append(algorithm.current_speeds())
+        sample = algorithm.current_speeds()
+        samples.append(sample)
+        sample_callback(sample, duration - i*BENCHMARK_SAMPLE_INTERVAL)
         sleep(BENCHMARK_SAMPLE_INTERVAL)
     algorithm.detach_device(device)
 
+    # return average of all samples
     def sum_list_elements(lists):
         head_list = lists[0]
         if len(lists) == 1:
