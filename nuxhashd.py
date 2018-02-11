@@ -10,6 +10,7 @@ from urllib2 import HTTPError, URLError
 import argparse
 import logging
 import os
+import readline
 import signal
 import socket
 import sys
@@ -103,11 +104,8 @@ def save_persistent_data(config_dir, settings, benchmarks):
 def initial_setup():
     print 'nuxhashd initial setup'
 
-    print 'Wallet address:',
-    wallet = raw_input()
-
-    print 'Worker name:',
-    workername = raw_input()
+    wallet = raw_input('Wallet address: ')
+    workername = raw_input('Worker name: ')
 
     return wallet, workername
 
