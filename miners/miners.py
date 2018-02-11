@@ -1,7 +1,7 @@
 from time import sleep
 import logging
 
-BENCHMARK_WARMUP = 15
+BENCHMARK_WARMUP = 120
 BENCHMARK_SAMPLE_INTERVAL = 1
 
 class MinerException(Exception):
