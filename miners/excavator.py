@@ -1,6 +1,7 @@
 import miner
 
 import json
+import os
 import socket
 import subprocess
 import threading
@@ -37,7 +38,8 @@ class ExcavatorServer(object):
                                          '-p', str(self.address[1])],
                                         stdin=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
-                                        stdout=subprocess.PIPE)
+                                        stdout=subprocess.PIPE,
+                                        preexec_fn=os.setpgrp) # don't forward signals
         # send stdout to logger
         log_thread = threading.Thread(target=miner.log_output, args=(self.process,))
         log_thread.start()
