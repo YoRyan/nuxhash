@@ -66,7 +66,9 @@ def main():
         nx_settings['nicehash']['region'] = region
 
     if args.benchmark_all:
-        nx_benchmarks = run_all_benchmarks(nx_settings, devices)
+        new_benchmarks = run_all_benchmarks(nx_settings, devices)
+        for d in devices:
+            nx_benchmarks[d].update(new_benchmarks[d])
     elif args.list_devices:
         list_devices(devices)
     else:
@@ -85,14 +87,16 @@ def load_persistent_data(config_dir, devices):
     else:
         nx_settings = settings.read_from_file(settings_fd)
 
+    nx_benchmarks = dict([(d, {}) for d in devices])
     try:
         benchmarks_fd = open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'r')
     except IOError as err:
         if err.errno != 2:
             raise
-        nx_benchmarks = dict([(d, {}) for d in devices])
     else:
-        nx_benchmarks = benchmarks.read_from_file(benchmarks_fd, devices)
+        saved_benchmarks = benchmarks.read_from_file(benchmarks_fd, devices)
+        for d in devices:
+            nx_benchmarks[d].update(saved_benchmarks[d])
 
     return nx_settings, nx_benchmarks
 
@@ -151,12 +155,17 @@ def run_all_benchmarks(nx_settings, devices):
                             utils.format_time(secs_remaining))),
                 sys.stdout.flush()
 
-            average_speeds = utils.run_benchmark(algorithm, device,
-                                                 BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
-                                                 sample_callback=report_speeds)
-            nx_benchmarks[device][algorithm.name] = average_speeds
-            print '  %s: %s                      ' % (algorithm.name,
-                                                      utils.format_speeds(average_speeds))
+            try:
+                average_speeds = utils.run_benchmark(algorithm, device,
+                                                     BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
+                                                     sample_callback=report_speeds)
+            except KeyboardInterrupt:
+                print 'Benchmarking aborted (completed benchmarks saved).'
+                break
+            else:
+                nx_benchmarks[device][algorithm.name] = average_speeds
+                print '  %s: %s                      ' % (algorithm.name,
+                                                          utils.format_speeds(average_speeds))
 
     excavator.unload()
 
@@ -184,8 +193,6 @@ def do_mining(nx_settings, nx_benchmarks, devices):
 
     # quit signal
     quit = Event()
-    def sigint_handler(signum, frame):
-        quit.set()
     signal.signal(signal.SIGINT, lambda signum, frame: quit.set())
 
     current_algorithm = dict([(d, None) for d in devices])
