@@ -86,6 +86,7 @@ def load_persistent_data(config_dir, devices):
         nx_settings = settings.DEFAULT_SETTINGS
     else:
         nx_settings = settings.read_from_file(settings_fd)
+        settings_fd.close()
 
     nx_benchmarks = dict([(d, {}) for d in devices])
     try:
@@ -97,6 +98,7 @@ def load_persistent_data(config_dir, devices):
         saved_benchmarks = benchmarks.read_from_file(benchmarks_fd, devices)
         for d in devices:
             nx_benchmarks[d].update(saved_benchmarks[d])
+        benchmarks_fd.close()
 
     return nx_settings, nx_benchmarks
 
@@ -107,10 +109,11 @@ def save_persistent_data(config_dir, nx_settings, nx_benchmarks):
         if not os.path.isdir(config_dir):
             raise
 
-    settings.write_to_file(open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'w'),
-                           nx_settings)
-    benchmarks.write_to_file(open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'w'),
-                             nx_benchmarks)
+    with open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'w') as settings_fd:
+        settings.write_to_file(settings_fd, nx_settings)
+
+    with open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'w') as benchmarks_fd:
+        benchmarks.write_to_file(benchmarks_fd, nx_benchmarks)
 
 def initial_setup():
     print 'nuxhashd initial setup'
