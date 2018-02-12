@@ -132,10 +132,8 @@ def run_all_benchmarks(nx_settings, devices):
     excavator.load()
     algorithms = excavator.algorithms
 
-    nx_benchmarks = {}
+    nx_benchmarks = dict([(d, {}) for d in devices])
     for device in sorted(devices, key=str):
-        nx_benchmarks[device] = {}
-
         if device.driver == 'nvidia':
             print '\nCUDA device %d: %s' % (device.index, device.name)
 
