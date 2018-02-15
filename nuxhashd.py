@@ -237,14 +237,14 @@ def do_mining(nx_settings, nx_benchmarks, devices):
         try:
             mbtc_per_hash = nicehash.simplemultialgo_info(nx_settings)[0]
         except URLError as err:
-            logging.warning('Failed to retrieve NiceHash profitability sttas: %s' %
+            logging.warning('Failed to retrieve NiceHash profitability stats: %s' %
                             err.reason)
         except HTTPError as err:
             logging.warning('Failed to retrieve NiceHash profitability stats: %s %s' %
                             (err.code, err.reason))
         except socket.timeout:
             logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
-        except json.decoder.JSONDecodeError:
+        except ValueError:
             logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
 
     logging.info('Cleaning up')
