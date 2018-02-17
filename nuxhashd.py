@@ -7,6 +7,7 @@ import nicehash
 import settings
 import utils
 
+from ssl import SSLError
 from threading import Event
 from time import sleep
 from urllib2 import HTTPError, URLError
@@ -242,6 +243,9 @@ def do_mining(nx_settings, nx_benchmarks, devices):
         except HTTPError as err:
             logging.warning('Failed to retrieve NiceHash profitability stats: %s %s' %
                             (err.code, err.reason))
+        except SSLError as err:
+            logging.warning('Failed to retrieve NiceHash profitability stats: %s' %
+                            err.reason)
         except socket.timeout:
             logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
         except ValueError:
