@@ -245,7 +245,7 @@ def do_mining(nx_settings, nx_benchmarks, devices):
                             (err.code, err.reason))
         except (socket.timeout, SSLError):
             logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
-        except ValueError:
+        except (ValueError, KeyError):
             logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
 
     logging.info('Cleaning up')
