@@ -23,9 +23,6 @@ DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
 BENCHMARKS_FILENAME = 'benchmarks.json'
 
-BENCHMARK_WARMUP_SECS = 240
-BENCHMARK_SECS = 60
-
 def main():
     # parse commmand-line arguments
     argp = argparse.ArgumentParser(description='Sell GPU hash power on the NiceHash market.')
@@ -159,7 +156,8 @@ def run_all_benchmarks(nx_settings, devices):
 
             try:
                 average_speeds = utils.run_benchmark(algorithm, device,
-                                                     BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
+                                                     nx_settings['benchmark']['warmup_secs'], 
+                                                     nx_settings['benchmark']['benchmark_secs'],
                                                      sample_callback=report_speeds)
             except KeyboardInterrupt:
                 print 'Benchmarking aborted (completed benchmarks saved).'
