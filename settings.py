@@ -14,7 +14,7 @@ DEFAULT_SETTINGS = {
     'switching': {
         'interval': 60,
         'threshold': 0.1
-        }
+        },
     'benchmark': {
         'warmup_secs': 240,
         'benchmark_secs': 60
