@@ -7,6 +7,24 @@ import subprocess
 import threading
 from time import sleep
 
+ALGORITHMS = [
+    'equihash',
+    'pascal',
+    'decred',
+    'sia',
+    'lbry',
+    'blake2s',
+    'daggerhashimoto',
+    'lyra2rev2',
+    'daggerhashimoto_decred',
+    'daggerhashimoto_sia',
+    'daggerhashimoto_pascal',
+    'cryptonight',
+    'keccak',
+    'neoscrypt',
+    'nist5'
+    ]
+
 class ExcavatorError(Exception):
     pass
 
@@ -18,17 +36,18 @@ class ExcavatorAPIError(ExcavatorError):
 
 class ExcavatorServer(object):
     BUFFER_SIZE = 1024
+    RATE_LIMIT_WAIT = 1
     TIMEOUT = 10
 
-    def __init__(self, executable, port, stratums, auth):
+    def __init__(self, executable, port, region, auth):
         self.executable = executable
         self.address = ('127.0.0.1', port)
-        self.stratums = stratums
+        self.region = region
         self.auth = auth
-        # dict of algorithm name -> (excavator algorithm id, [attached devices])
-        self.running_algorithms = {}
-        # dict of device id -> excavator worker id
-        # TODO allow multiple simultaneous algorithms per device
+        # dict of algorithm name -> ESAlgorithm
+        self.running_algorithms = dict([(algorithm, ESAlgorithm(self, algorithm))
+                                        for algorithm in ALGORITHMS])
+        # dict of (algorithm name, device id) -> excavator worker id
         self.running_workers = {}
 
     def start(self):
@@ -44,11 +63,15 @@ class ExcavatorServer(object):
         log_thread = threading.Thread(target=miner.log_output, args=(self.process,))
         log_thread.start()
 
-        while not self.test_connection():
+        while not self._test_connection():
             if self.process.poll() is None:
                 sleep(1)
             else:
                 raise miner.MinerStartFailed
+
+        # connect to NiceHash
+        self.send_command('subscribe', ['nhmp.%s.nicehash.com:3200' % self.region,
+                                        self.auth])
 
     def stop(self):
         """Stops excavator."""
@@ -69,13 +92,16 @@ class ExcavatorServer(object):
         params -- list of arguments for the command
         """
 
+        # make connection
+        sleep(self.RATE_LIMIT_WAIT)
+        s = socket.create_connection(self.address, self.TIMEOUT)
+
+        # send newline-terminated command
         command = {
             'id': 1,
             'method': method,
-            'params': params
+            'params': [str(param) for param in params]
             }
-        s = socket.create_connection(self.address, self.TIMEOUT)
-        # send newline-terminated command
         s.sendall((json.dumps(command).replace('\n', '\\n') + '\n').encode())
         response = ''
         while True:
@@ -88,13 +114,14 @@ class ExcavatorServer(object):
                 response += chunk
         s.close()
 
+        # read response
         response_data = json.loads(response)
         if response_data['error'] is None:
             return response_data
         else:
             raise ExcavatorAPIError(response_data)
 
-    def test_connection(self):
+    def _test_connection(self):
         try:
             self.send_command('info', [])
         except (socket.error, socket.timeout):
@@ -102,79 +129,85 @@ class ExcavatorServer(object):
         else:
             return True
 
-    def dispatch_device(self, algorithm, device):
+    def start_work(self, algorithm, device):
         """Start running algorithm on device."""
-        if algorithm not in self.running_algorithms:
-            add_params = [algorithm] + sum([[self.stratums[ma], self.auth]
-                                            for ma in algorithm.split('_')], [])
+        # create associated algorithm(s)
+        for multialgorithm in algorithm.split('_'):
+            self.running_algorithms[multialgorithm].grab()
+        # create worker
+        response = self.send_command('worker.add', [algorithm, str(device.index)])
+        self.running_workers[(algorithm, device)] = response['worker_id']
 
-            response = self.send_command('algorithm.add', add_params)
-            algorithm_id = response['algorithm_id']
-            self.running_algorithms[algorithm] = (algorithm_id, [device])
-        else:
-            algorithm_id = self.running_algorithms[algorithm][0]
-            self.running_algorithms[algorithm][1].append(device)
-
-        response = self.send_command('worker.add', [str(algorithm_id),
-                                                    str(device.index)])
-        self.running_workers[device] = response['worker_id']
-
-    def free_device(self, device):
-        """Stop running the active algorithm on device."""
-        algorithm = [a for a in self.running_algorithms.keys()
-                     if device in self.running_algorithms[a][1]][0]
-        self.running_algorithms[algorithm][1].remove(device)
-        worker_id = self.running_workers[device]
-        self.running_workers.pop(device)
-
+    def stop_work(self, algorithm, device):
+        """Stop running algorithm on device."""
+        # destroy worker
+        worker_id = self.running_workers[(algorithm, device)]
         self.send_command('worker.free', [str(worker_id)])
-
-        if len(self.running_algorithms[algorithm][1]) == 0: # no more devices
-            algorithm_id = self.running_algorithms[algorithm][0]
-            self.running_algorithms.pop(algorithm)
-
-            self.send_command('algorithm.remove', [str(algorithm_id)])
-
-    def device_speeds(self, device):
-        """Get current speeds for device that is running a single algorithm."""
-        algorithm = [a for a in self.running_algorithms.keys()
-                     if device in self.running_algorithms[a][1]][0]
-
-        response = self.send_command('algorithm.list', [])
-
-        algorithm_data = [ad for ad in response['algorithms']
-                          if ad['name'] == algorithm][0]
-        worker_id = self.running_workers[device]
-        worker_data = [wd for wd in algorithm_data['workers']
-                       if wd['worker_id'] == worker_id][0]
-        return worker_data['speed']
+        self.running_workers.pop((algorithm, device))
+        # destroy associated algorithm(s) if no longer used
+        for multialgorithm in algorithm.split('_'):
+            self.running_algorithms[multialgorithm].release()
 
     def algorithm_speeds(self, algorithm):
         """Get sum of speeds for all devices running algorithm."""
         response = self.send_command('algorithm.list', [])
 
-        algorithm_data = [ad for ad in response['algorithms']
-                          if ad['name'] == algorithm][0]
-        worker_speeds = [wd['speed'] for wd in algorithm_data['workers']]
-        return [sum([ws[0] for ws in worker_speeds]),
-                sum([ws[1] for ws in worker_speeds])]
+        data = [ad for ad in response['algorithms']
+                if ad['name'] == algorithm][0]
+        speed = data['speed']
+        if isinstance(speed, float):
+            return [speed]
+        else:
+            return speed
+
+class ESResource(object):
+    def __init__(self):
+        self.hodlers = 0
+
+    def grab(self):
+        if self.hodlers <= 0:
+            self._create()
+        self.hodlers += 1
+
+    def release(self):
+        self.hodlers -= 1
+        if self.hodlers <= 0:
+            self.hodlers = 0
+            self._destroy()
+
+    def _create(self):
+        pass
+
+    def _destroy(self):
+        pass
+
+class ESAlgorithm(ESResource):
+    def __init__(self, server, algorithm):
+        super(ESAlgorithm, self).__init__()
+        self.server = server
+        self.params = algorithm.split('_')
+
+    def _create(self):
+        self.server.send_command('algorithm.add', self.params)
+
+    def _destroy(self):
+        self.server.send_command('algorithm.remove', self.params)
 
 class ExcavatorAlgorithm(miner.Algorithm):
     def __init__(self, parent, algorithm):
         super(ExcavatorAlgorithm, self).__init__(parent,
                                                  name='excavator_%s' % algorithm,
                                                  algorithms=algorithm.split('_'))
-        pass
 
     def attach_device(self, device):
         try:
-            self.parent.server.dispatch_device('_'.join(self.algorithms), device)
+            self.parent.server.start_work('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
 
     def detach_device(self, device):
         try:
-            self.parent.server.free_device(device)
+            self.parent.server.stop_work('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
 
@@ -190,29 +223,11 @@ class ExcavatorAlgorithm(miner.Algorithm):
                 return speeds[:1]
 
 class Excavator(miner.Miner):
-    ALGORITHMS = [
-        'equihash',
-        'pascal',
-        'decred',
-        'sia',
-        'lbry',
-        'blake2s',
-        'daggerhashimoto',
-        'lyra2rev2',
-        'daggerhashimoto_decred',
-        'daggerhashimoto_sia',
-        'daggerhashimoto_pascal',
-        'cryptonight',
-        'keccak',
-        'neoscrypt',
-        'nist5'
-        ]
-
     def __init__(self, settings, stratums):
         super(Excavator, self).__init__(settings, stratums)
 
         self.server = None
-        for algorithm in self.ALGORITHMS:
+        for algorithm in ALGORITHMS:
             runnable = ExcavatorAlgorithm(self, algorithm)
             self.algorithms.append(runnable)
 
@@ -221,7 +236,7 @@ class Excavator(miner.Miner):
                             self.settings['nicehash']['workername'])
         self.server = ExcavatorServer(self.settings['excavator']['path'],
                                       self.settings['excavator']['port'],
-                                      self.stratums,
+                                      self.settings['nicehash']['region'],
                                       auth)
         self.server.start()
 
