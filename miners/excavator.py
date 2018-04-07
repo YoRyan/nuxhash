@@ -148,17 +148,14 @@ class ExcavatorServer(object):
         for multialgorithm in algorithm.split('_'):
             self.running_algorithms[multialgorithm].release()
 
-    def algorithm_speeds(self, algorithm):
-        """Get sum of speeds for all devices running algorithm."""
-        response = self.send_command('algorithm.list', [])
+    def device_speeds(self, device):
+        """Report the speeds of all algorithms running on device."""
+        response = self.send_command('worker.list', [])
 
-        data = [ad for ad in response['algorithms']
-                if ad['name'] == algorithm][0]
-        speed = data['speed']
-        if isinstance(speed, float):
-            return [speed]
-        else:
-            return speed
+        data = [worker for worker in response['workers']
+                if worker['device_id'] == device.index][0]
+        return dict([(algorithm['name'], algorithm['speed'])
+                     for algorithm in data['algorithms']])
 
 class ESResource(object):
     def __init__(self):
@@ -198,29 +195,33 @@ class ExcavatorAlgorithm(miner.Algorithm):
         super(ExcavatorAlgorithm, self).__init__(parent,
                                                  name='excavator_%s' % algorithm,
                                                  algorithms=algorithm.split('_'))
+        self.devices = set()
 
     def attach_device(self, device):
         try:
             self.parent.server.start_work('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
+        else:
+            self.devices.add(device)
 
     def detach_device(self, device):
         try:
             self.parent.server.stop_work('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
+        else:
+            self.devices.remove(device)
 
     def current_speeds(self):
         try:
-            speeds = self.parent.server.algorithm_speeds('_'.join(self.algorithms))
+            stats = [self.parent.server.device_speeds(device)
+                     for device in self.devices]
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
         else:
-            if len(self.algorithms) == 2:
-                return speeds
-            else:
-                return speeds[:1]
+            total_speed = lambda algorithm: sum([dd[algorithm] for dd in stats])
+            return [total_speed(algorithm) for algorithm in self.algorithms]
 
 class Excavator(miner.Miner):
     def __init__(self, settings, stratums):
