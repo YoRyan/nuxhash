@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 
-import miners.devices
+import devices.nvidia
 import miners.excavator
 import miners.miner
 import settings
@@ -13,7 +13,7 @@ from time import sleep
 
 logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
-devices = miners.devices.enumerate_nvidia_devices()
+devices = devices.nvidia.enumerate_devices()
 
 stratums = {
     'neoscrypt': 'neoscrypt.usa.nicehash.com:3341',

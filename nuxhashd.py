@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 import benchmarks
-import miners.devices
+import devices.nvidia
 import miners.excavator
 import nicehash
 import settings
@@ -54,10 +54,11 @@ def main():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log_level)
 
     # probe graphics cards
-    devices = miners.devices.enumerate_devices()
+    nvidia_devices = devices.nvidia.enumerate_devices()
+    all_devices = nvidia_devices
 
     # load from config directory
-    nx_settings, nx_benchmarks = load_persistent_data(config_dir, devices)
+    nx_settings, nx_benchmarks = load_persistent_data(config_dir, all_devices)
 
     # if no wallet configured, do initial setup prompts
     if nx_settings['nicehash']['wallet'] == '':
@@ -67,18 +68,18 @@ def main():
         nx_settings['nicehash']['region'] = region
 
     if args.benchmark_all:
-        new_benchmarks = run_all_benchmarks(nx_settings, devices)
-        for d in devices:
+        new_benchmarks = run_all_benchmarks(nx_settings, all_devices)
+        for d in new_benchmarks:
             nx_benchmarks[d].update(new_benchmarks[d])
     elif args.list_devices:
-        list_devices(devices)
+        list_devices(all_devices)
     else:
-        do_mining(nx_settings, nx_benchmarks, devices)
+        do_mining(nx_settings, nx_benchmarks, all_devices)
 
     # save to config directory
     save_persistent_data(config_dir, nx_settings, nx_benchmarks)
 
-def load_persistent_data(config_dir, devices):
+def load_persistent_data(config_dir, nx_devices):
     try:
         settings_fd = open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'r')
     except IOError as err:
@@ -89,15 +90,15 @@ def load_persistent_data(config_dir, devices):
         nx_settings = settings.read_from_file(settings_fd)
         settings_fd.close()
 
-    nx_benchmarks = {d: {} for d in devices}
+    nx_benchmarks = {d: {} for d in nx_devices}
     try:
         benchmarks_fd = open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'r')
     except IOError as err:
         if err.errno != 2:
             raise
     else:
-        saved_benchmarks = benchmarks.read_from_file(benchmarks_fd, devices)
-        for d in devices:
+        saved_benchmarks = benchmarks.read_from_file(benchmarks_fd, nx_devices)
+        for d in saved_benchmarks:
             nx_benchmarks[d].update(saved_benchmarks[d])
         benchmarks_fd.close()
 
@@ -127,7 +128,7 @@ def initial_setup():
 
     return wallet, workername, region
 
-def run_all_benchmarks(nx_settings, devices):
+def run_all_benchmarks(nx_settings, nx_devices):
     print 'Querying NiceHash for miner connection information...'
     stratums = nicehash.simplemultialgo_info(nx_settings)[1]
 
@@ -136,10 +137,10 @@ def run_all_benchmarks(nx_settings, devices):
     excavator.load()
     algorithms = excavator.algorithms
 
-    nx_benchmarks = {d: {} for d in devices}
-    for device in sorted(devices, key=str):
-        if device.driver == 'nvidia':
-            print '\nCUDA device %d: %s' % (device.index, device.name)
+    nx_benchmarks = {d: {} for d in nx_devices}
+    for device in sorted(nx_devices, key=str):
+        if isinstance(device, devices.nvidia.NvidiaDevice):
+            print '\nCUDA device %d: %s' % (device.cuda_index, device.name)
 
         for algorithm in algorithms:
             status_dot = [-1]
@@ -173,12 +174,12 @@ def run_all_benchmarks(nx_settings, devices):
 
     return nx_benchmarks
 
-def list_devices(devices):
-    for d in sorted(devices, key=str):
-        if d.driver == 'nvidia':
-            print 'CUDA device %d: %s' % (d.index, d.name)
+def list_devices(nx_devices):
+    for d in sorted(nx_devices, key=str):
+        if isinstance(d, devices.nvidia.NvidiaDevice):
+            print 'CUDA device %d (%s): %s' % (d.cuda_index, d.uuid, d.name)
 
-def do_mining(nx_settings, nx_benchmarks, devices):
+def do_mining(nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
     logging.info('Querying NiceHash for miner connection information...')
     mbtc_per_hash = stratums = None
@@ -197,10 +198,10 @@ def do_mining(nx_settings, nx_benchmarks, devices):
     quit = Event()
     signal.signal(signal.SIGINT, lambda signum, frame: quit.set())
 
-    current_algorithm = {d: None for d in devices}
+    current_algorithm = {d: None for d in nx_devices}
     while not quit.is_set():
         # calculate most profitable algorithm for each device
-        for device in devices:
+        for device in nx_devices:
             def mbtc_per_day(algorithm):
                 device_benchmarks = nx_benchmarks[device]
                 if algorithm.name in device_benchmarks:

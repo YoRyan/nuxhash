@@ -138,7 +138,7 @@ class ExcavatorServer(object):
             self.running_algorithms[multialgorithm].grab()
 
         # create worker
-        response = self.send_command('worker.add', [algorithm, str(device.index)])
+        response = self.send_command('worker.add', [algorithm, device.cuda_index])
         self.running_workers[(algorithm, device)] = response['worker_id']
 
     def stop_work(self, algorithm, device):
@@ -158,7 +158,7 @@ class ExcavatorServer(object):
 
         # NOTE: assumes 1:1 mapping of workers to devices
         data = [worker for worker in response['workers']
-                if worker['device_id'] == device.index][0]
+                if worker['device_id'] == device.cuda_index][0]
         return {algorithm['name']: algorithm['speed'] for algorithm in data['algorithms']}
 
 class ESResource(object):
