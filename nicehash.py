@@ -17,8 +17,8 @@ def algorithm_payrates():
     response = api_call('simplemultialgo.info', {})
 
     algorithms = response['result']['simplemultialgo']
-    payrates = dict([(a['name'], float(a['paying'])) for a in algorithms])
-    ports = dict([(a['name'], int(a['port'])) for a in algorithms])
+    payrates = {a['name']: float(a['paying']) for a in algorithms}
+    ports = {a['name']: int(a['port']) for a in algorithms}
 
     return payrates, ports
 
@@ -31,12 +31,11 @@ def simplemultialgo_info(nx_settings):
     response = api_call('simplemultialgo.info', [])
 
     algorithms_info = response['result']['simplemultialgo']
-    mbtc_per_hash = dict([(a['name'], float(a['paying'])*1e-11)
-                          for a in algorithms_info])
-    stratums = dict([(a['name'], ('%s.%s.nicehash.com:%d' %
-                                  (a['name'], nx_settings['nicehash']['region'],
-                                   a['port'])))
-                     for a in algorithms_info])
+    mbtc_per_hash = {a['name']: float(a['paying'])*1e-11 for a in algorithms_info}
+    stratums = {a['name']: '%s.%s.nicehash.com:%d' % (a['name'],
+                                                      nx_settings['nicehash']['region'],
+                                                      a['port'])
+                for a in algorithms_info}
 
     return mbtc_per_hash, stratums
 

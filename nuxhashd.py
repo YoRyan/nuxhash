@@ -89,7 +89,7 @@ def load_persistent_data(config_dir, devices):
         nx_settings = settings.read_from_file(settings_fd)
         settings_fd.close()
 
-    nx_benchmarks = dict([(d, {}) for d in devices])
+    nx_benchmarks = {d: {} for d in devices}
     try:
         benchmarks_fd = open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'r')
     except IOError as err:
@@ -136,7 +136,7 @@ def run_all_benchmarks(nx_settings, devices):
     excavator.load()
     algorithms = excavator.algorithms
 
-    nx_benchmarks = dict([(d, {}) for d in devices])
+    nx_benchmarks = {d: {} for d in devices}
     for device in sorted(devices, key=str):
         if device.driver == 'nvidia':
             print '\nCUDA device %d: %s' % (device.index, device.name)
@@ -197,7 +197,7 @@ def do_mining(nx_settings, nx_benchmarks, devices):
     quit = Event()
     signal.signal(signal.SIGINT, lambda signum, frame: quit.set())
 
-    current_algorithm = dict([(d, None) for d in devices])
+    current_algorithm = {d: None for d in devices}
     while not quit.is_set():
         # calculate most profitable algorithm for each device
         for device in devices:
