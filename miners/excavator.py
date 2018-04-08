@@ -195,11 +195,12 @@ class ESAlgorithm(ESResource):
         self.server.send_command('algorithm.remove', self.params)
 
 class ExcavatorAlgorithm(miner.Algorithm):
-    def __init__(self, parent, algorithm):
-        algorithms = [a.lower() for a in algorithm.split('_')]
+    def __init__(self, parent, excavator_algorithm):
+        algorithms = excavator_algorithm.lower().split('_')
         super(ExcavatorAlgorithm, self).__init__(parent,
-                                                 name='excavator_%s' % algorithm,
+                                                 name='excavator_%s' % excavator_algorithm,
                                                  algorithms=algorithms)
+        self.excavator_algorithm = excavator_algorithm
         self.devices = set()
 
     def set_devices(self, devices):
@@ -213,7 +214,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
 
     def _attach_device(self, device):
         try:
-            self.parent.server.start_work('_'.join(self.algorithms), device)
+            self.parent.server.start_work(self.excavator_algorithm, device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
         else:
@@ -221,7 +222,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
 
     def _detach_device(self, device):
         try:
-            self.parent.server.stop_work('_'.join(self.algorithms), device)
+            self.parent.server.stop_work(self.excavator_algorithm, device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
         else:
@@ -236,7 +237,8 @@ class ExcavatorAlgorithm(miner.Algorithm):
         else:
             total_speed = lambda algorithm: sum([w[algorithm] for w in workers
                                                  if algorithm in w])
-            return [total_speed(algorithm) for algorithm in self.algorithms]
+            return [total_speed(algorithm)
+                    for algorithm in self.excavator_algorithm.split('_')]
 
 class Excavator(miner.Miner):
     def __init__(self, settings, stratums):
