@@ -37,7 +37,6 @@ class ExcavatorAPIError(ExcavatorError):
 
 class ExcavatorServer(object):
     BUFFER_SIZE = 1024
-    RATE_LIMIT_WAIT = 1
     TIMEOUT = 10
 
     def __init__(self, executable, port, region, auth):
@@ -98,16 +97,13 @@ class ExcavatorServer(object):
         params -- list of arguments for the command
         """
 
-        # make connection
-        sleep(self.RATE_LIMIT_WAIT)
-        s = socket.create_connection(self.address, self.TIMEOUT)
-
         # send newline-terminated command
         command = {
             'id': 1,
             'method': method,
             'params': [str(param) for param in params]
             }
+        s = socket.create_connection(self.address, self.TIMEOUT)
         s.sendall((json.dumps(command).replace('\n', '\\n') + '\n').encode())
         response = ''
         while True:
