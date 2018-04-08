@@ -199,6 +199,7 @@ def do_mining(nx_settings, nx_benchmarks, devices):
 
     current_algorithm = dict([(d, None) for d in devices])
     while not quit.is_set():
+        # calculate most profitable algorithm for each device
         for device in devices:
             def mbtc_per_day(algorithm):
                 device_benchmarks = nx_benchmarks[device]
@@ -216,8 +217,6 @@ def do_mining(nx_settings, nx_benchmarks, devices):
             if current is None:
                 logging.info('Assigning %s to %s (%.3f mBTC/day)' %
                              (device, maximum.name, mbtc_per_day(maximum)))
-
-                maximum.attach_device(device)
                 current_algorithm[device] = maximum
             elif current != maximum:
                 current_revenue = mbtc_per_day(current)
@@ -228,12 +227,16 @@ def do_mining(nx_settings, nx_benchmarks, devices):
                     logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)' %
                                  (device, current.name, maximum.name,
                                   current_revenue, maximum_revenue))
-
-                    current.detach_device(device)
-                    maximum.attach_device(device)
                     current_algorithm[device] = maximum
+
+        # attach devices to respective algorithms atomically
+        for algorithm in algorithms:
+            my_devices = [d for d, a in current_algorithm.items() if a == algorithm]
+            algorithm.set_devices(my_devices)
+
         # wait for specified interval
         quit.wait(nx_settings['switching']['interval'])
+
         # query nicehash profitability data again
         try:
             mbtc_per_hash = nicehash.simplemultialgo_info(nx_settings)[0]

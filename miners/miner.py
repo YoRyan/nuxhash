@@ -38,12 +38,8 @@ class Algorithm(object):
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)
 
-    def attach_device(self, device):
-        """Run this algorithm on device."""
-        pass
-
-    def detach_device(self, device):
-        """Stop running this algorithm on device."""
+    def set_devices(self, devices):
+        """Run this algorithm on the set of devices."""
         pass
 
     def current_speeds(self):

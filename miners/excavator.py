@@ -202,7 +202,17 @@ class ExcavatorAlgorithm(miner.Algorithm):
                                                  algorithms=algorithms)
         self.devices = set()
 
-    def attach_device(self, device):
+    def set_devices(self, devices):
+        old = self.devices
+        new = set(devices)
+        if old != new:
+            for device in old - new:
+                self._detach_device(device)
+            for device in new - old:
+                self._attach_device(device)
+            self.devices = new
+
+    def _attach_device(self, device):
         try:
             self.parent.server.start_work('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
@@ -210,7 +220,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
         else:
             self.devices.add(device)
 
-    def detach_device(self, device):
+    def _detach_device(self, device):
         try:
             self.parent.server.stop_work('_'.join(self.algorithms), device)
         except (socket.error, socket.timeout):
