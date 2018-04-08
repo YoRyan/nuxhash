@@ -23,7 +23,7 @@ stratums = {
     }
 
 my_settings = settings.DEFAULT_SETTINGS
-my_settings['nicehash']['wallet'] = '1BQSMa5mfDNzut5PN9xgtJe3wqaqGEEerD'
+my_settings['nicehash']['wallet'] = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
 
 exc = miners.excavator.Excavator(my_settings, stratums)
 exc.load()
@@ -31,7 +31,7 @@ exc.load()
 ns = [a for a in exc.algorithms if a.algorithms == ['neoscrypt']][0]
 ns.set_devices([devices[0]])
 sleep(10)
-ns.set_devices([devices[0]])
+ns.set_devices([])
 
 eq = [a for a in exc.algorithms if a.algorithms == ['equihash']][0]
 logging.info('equihash benchmark = ' + str(utils.run_benchmark(eq, devices[0], 30, 60)))

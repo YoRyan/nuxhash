@@ -156,10 +156,10 @@ class ExcavatorServer(object):
         """Report the speeds of all algorithms running on device."""
         response = self.send_command('worker.list', [])
 
+        # NOTE: assumes 1:1 mapping of workers to devices
         data = [worker for worker in response['workers']
                 if worker['device_id'] == device.index][0]
-        return dict([(algorithm['name'], algorithm['speed'])
-                     for algorithm in data['algorithms']])
+        return {algorithm['name']: algorithm['speed'] for algorithm in data['algorithms']}
 
 class ESResource(object):
     def __init__(self):
@@ -229,12 +229,13 @@ class ExcavatorAlgorithm(miner.Algorithm):
 
     def current_speeds(self):
         try:
-            stats = [self.parent.server.device_speeds(device)
-                     for device in self.devices]
+            workers = [self.parent.server.device_speeds(device)
+                       for device in self.devices]
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
         else:
-            total_speed = lambda algorithm: sum([dd[algorithm] for dd in stats])
+            total_speed = lambda algorithm: sum([w[algorithm] for w in workers
+                                                 if algorithm in w])
             return [total_speed(algorithm) for algorithm in self.algorithms]
 
 class Excavator(miner.Miner):
