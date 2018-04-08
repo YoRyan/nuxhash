@@ -29,9 +29,9 @@ exc = miners.excavator.Excavator(my_settings, stratums)
 exc.load()
 
 ns = [a for a in exc.algorithms if a.algorithms == ['neoscrypt']][0]
-ns.attach_device(devices[0])
+ns.set_devices([devices[0]])
 sleep(10)
-ns.detach_device(devices[0])
+ns.set_devices([devices[0]])
 
 eq = [a for a in exc.algorithms if a.algorithms == ['equihash']][0]
 logging.info('equihash benchmark = ' + str(utils.run_benchmark(eq, devices[0], 30, 60)))
