@@ -196,9 +196,10 @@ class ESAlgorithm(ESResource):
 
 class ExcavatorAlgorithm(miner.Algorithm):
     def __init__(self, parent, algorithm):
+        algorithms = [a.lower() for a in algorithm.split('_')]
         super(ExcavatorAlgorithm, self).__init__(parent,
                                                  name='excavator_%s' % algorithm,
-                                                 algorithms=algorithm.split('_'))
+                                                 algorithms=algorithms)
         self.devices = set()
 
     def attach_device(self, device):
