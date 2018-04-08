@@ -210,7 +210,6 @@ class ExcavatorAlgorithm(miner.Algorithm):
                 self._detach_device(device)
             for device in new - old:
                 self._attach_device(device)
-            self.devices = new
 
     def _attach_device(self, device):
         try:
