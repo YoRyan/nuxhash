@@ -78,11 +78,14 @@ class ExcavatorServer(object):
         # stop all running workers
         for (algorithm, device) in self.running_workers.keys():
             self.stop_work(algorithm, device)
+
         # disconnect from NiceHash
         self.send_command('unsubscribe', [])
+
         # send the quit command, but don't read a response
         s = socket.create_connection(self.address, self.TIMEOUT)
         s.sendall(json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n')
+
         # wait for the process to exit
         self.process.wait()
         self.stdout = None
@@ -136,6 +139,7 @@ class ExcavatorServer(object):
         # create associated algorithm(s)
         for multialgorithm in algorithm.split('_'):
             self.running_algorithms[multialgorithm].grab()
+
         # create worker
         response = self.send_command('worker.add', [algorithm, str(device.index)])
         self.running_workers[(algorithm, device)] = response['worker_id']
@@ -146,6 +150,7 @@ class ExcavatorServer(object):
         worker_id = self.running_workers[(algorithm, device)]
         self.send_command('worker.free', [str(worker_id)])
         self.running_workers.pop((algorithm, device))
+
         # destroy associated algorithm(s) if no longer used
         for multialgorithm in algorithm.split('_'):
             self.running_algorithms[multialgorithm].release()
