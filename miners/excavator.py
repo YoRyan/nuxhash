@@ -75,15 +75,15 @@ class ExcavatorServer(object):
 
     def stop(self):
         """Stops excavator."""
-        self.running_workers = {}
-        try:
-            self.send_command('quit', [])
-        except socket.error as err:
-            if err.errno != 104: # expected error: connection reset by peer
-                raise
-        else:
-            self.process.wait()
-            self.stdout = None
+        # stop all running workers
+        for (algorithm, device) in self.running_workers.keys():
+            self.stop_work(algorithm, device)
+        # send the quit command, but don't read a response
+        s = socket.create_connection(self.address, self.TIMEOUT)
+        s.sendall(json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n')
+        # wait for the process to exit
+        self.process.wait()
+        self.stdout = None
 
     def send_command(self, method, params):
         """Sends a command to excavator, returns the JSON-encoded response.
