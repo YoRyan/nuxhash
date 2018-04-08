@@ -78,6 +78,8 @@ class ExcavatorServer(object):
         # stop all running workers
         for (algorithm, device) in self.running_workers.keys():
             self.stop_work(algorithm, device)
+        # disconnect from NiceHash
+        self.send_command('unsubscribe', [])
         # send the quit command, but don't read a response
         s = socket.create_connection(self.address, self.TIMEOUT)
         s.sendall(json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n')
