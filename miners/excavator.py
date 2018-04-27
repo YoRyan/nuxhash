@@ -19,10 +19,10 @@ ALGORITHMS = [
     'daggerhashimoto_decred',
     'daggerhashimoto_sia',
     'daggerhashimoto_pascal',
-    'cryptonight',
+    #'cryptonight',
     'keccak',
     'neoscrypt',
-    'nist5',
+    #'nist5',
     'cryptonightV7'
     ]
 
