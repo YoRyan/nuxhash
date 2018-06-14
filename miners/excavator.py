@@ -47,7 +47,9 @@ class ExcavatorServer(object):
         # dict of algorithm name -> ESAlgorithm
         self.running_algorithms = dict([(algorithm, ESAlgorithm(self, algorithm))
                                         for algorithm in ALGORITHMS])
-        # dict of (algorithm name, device id) -> excavator worker id
+        # dict of PCI bus id -> device id
+        self.device_map = {}
+        # dict of (algorithm name, Device instance) -> excavator worker id
         self.running_workers = {}
 
     def start(self):
@@ -72,6 +74,8 @@ class ExcavatorServer(object):
         # connect to NiceHash
         self.send_command('subscribe', ['nhmp.%s.nicehash.com:3200' % self.region,
                                         self.auth])
+
+        self._read_devices()
 
     def stop(self):
         """Stops excavator."""
@@ -131,6 +135,12 @@ class ExcavatorServer(object):
         else:
             return True
 
+    def _read_devices(self):
+        response = self.send_command('device.list', [])
+        bus_to_idx = {device_data['details']['bus_id']: device_data['device_id']
+                      for device_data in response['devices']}
+        self.device_map = bus_to_idx
+
     def start_work(self, algorithm, device):
         """Start running algorithm on device."""
         # create associated algorithm(s)
@@ -138,7 +148,8 @@ class ExcavatorServer(object):
             self.running_algorithms[multialgorithm].grab()
 
         # create worker
-        response = self.send_command('worker.add', [algorithm, device.cuda_index])
+        device_id = self.device_map[device.pci_bus]
+        response = self.send_command('worker.add', [algorithm, device_id])
         self.running_workers[(algorithm, device)] = response['worker_id']
 
     def stop_work(self, algorithm, device):
@@ -157,9 +168,11 @@ class ExcavatorServer(object):
         response = self.send_command('worker.list', [])
 
         # NOTE: assumes 1:1 mapping of workers to devices
-        data = [worker for worker in response['workers']
-                if worker['device_id'] == device.cuda_index][0]
-        return {algorithm['name']: algorithm['speed'] for algorithm in data['algorithms']}
+        device_id = self.device_map[device.pci_bus]
+        data = next(worker for worker in response['workers']
+                    if worker['device_id'] == device_id)
+        return {algorithm['name']: algorithm['speed']
+                for algorithm in data['algorithms']}
 
 class ESResource(object):
     def __init__(self):

@@ -2,8 +2,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 class NvidiaDevice(object):
-    def __init__(self, cuda_index, uuid, name):
-        self.cuda_index = cuda_index
+    def __init__(self, pci_bus, uuid, name):
+        self.pci_bus = pci_bus
         self.uuid = uuid
         self.name = name
     def __str__(self):
@@ -23,9 +23,9 @@ def enumerate_devices():
             raise
     else:
         for gpu in xml.findall('gpu'):
-            cuda_index = int(gpu.find('minor_number').text)
+            pci_bus = int(gpu.find('pci').find('pci_bus').text, 16)
             uuid = gpu.find('uuid').text
             name = gpu.find('product_name').text
-            devices.append(NvidiaDevice(cuda_index, uuid, name))
+            devices.append(NvidiaDevice(pci_bus, uuid, name))
     return devices
 
