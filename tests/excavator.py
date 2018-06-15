@@ -28,15 +28,15 @@ my_settings['nicehash']['wallet'] = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
 exc = miners.excavator.Excavator(my_settings, stratums)
 exc.load()
 
-ns = [a for a in exc.algorithms if a.algorithms == ['neoscrypt']][0]
+ns = next(a for a in exc.algorithms if a.algorithms == ['neoscrypt']])
 ns.set_devices([devices[0]])
 sleep(10)
 ns.set_devices([])
 
-eq = [a for a in exc.algorithms if a.algorithms == ['equihash']][0]
+eq = next(a for a in exc.algorithms if a.algorithms == ['equihash']])
 logging.info('equihash benchmark = ' + str(utils.run_benchmark(eq, devices[0], 30, 60)))
 
-dp = [a for a in exc.algorithms if a.algorithms == ['daggerhashimoto', 'pascal']][0]
+dp = next(a for a in exc.algorithms if a.algorithms == ['daggerhashimoto', 'pascal']])
 logging.info('daggerhash-pascal benchmark = ' + str(utils.run_benchmark(dp, devices[0], 30, 60)))
 
 exc.unload()
