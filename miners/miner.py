@@ -1,4 +1,5 @@
 import logging
+from functools import wraps
 
 class MinerException(Exception):
     pass
@@ -8,6 +9,10 @@ class MinerStartFailed(MinerException):
         self.failure = failure
 
 class MinerNotRunning(MinerException):
+    def __init__(self, failure):
+        self.failure = failure
+
+class MinerNotResponding(MinerException):
     def __init__(self, failure):
         self.failure = failure
 
@@ -24,6 +29,12 @@ class Miner(object):
         pass
     def unload(self):
         """Clean up after load()."""
+        pass
+    def reload(self):
+        """Restart the miner in the event of an unusual condition (crash)."""
+        pass
+    def is_running(self):
+        """Probe if the miner is operational."""
         pass
 
 class Algorithm(object):
@@ -44,6 +55,19 @@ class Algorithm(object):
 
     def current_speeds(self):
         pass
+
+    def restart_miner_if_needed(self):
+        if not self.parent.is_running():
+            self.parent.reload()
+
+# helper decorator for Algorithm methods
+def needs_miner_running(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if not self.parent.is_running():
+            self.parent.reload()
+        return method(self, *args, **kwargs)
+    return wrapper
 
 def log_output(process):
     while process.poll() is None:

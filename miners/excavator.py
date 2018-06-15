@@ -44,9 +44,10 @@ class ExcavatorServer(object):
         self.address = ('127.0.0.1', port)
         self.region = region
         self.auth = auth
+        self.process = None
         # dict of algorithm name -> ESAlgorithm
-        self.running_algorithms = dict([(algorithm, ESAlgorithm(self, algorithm))
-                                        for algorithm in ALGORITHMS])
+        self.running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
+                                   for algorithm in ALGORITHMS}
         # dict of PCI bus id -> device id
         self.device_map = {}
         # dict of (algorithm name, Device instance) -> excavator worker id
@@ -75,10 +76,38 @@ class ExcavatorServer(object):
         self.send_command('subscribe', ['nhmp.%s.nicehash.com:3200' % self.region,
                                         self.auth])
 
+        # read device topology
         self._read_devices()
+
+    def restart(self):
+        # kill old process (if any)
+        if self.process is not None:
+            try:
+                self.process.terminate()
+            except OSError, e:
+                if e.errno != os.errno.ESRCH:
+                    raise
+            self.process.wait()
+
+        # reset internal data structures
+        old_workers = self.running_workers
+        self.running_workers = {}
+        self.running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
+                                   for algorithm in ALGORITHMS}
+
+        # start excavator again
+        self.start()
+
+        # add back previous workers
+        for key, worker_id in old_workers.iteritems():
+            algorithm, device = key
+            self.start_work(algorithm, device)
 
     def stop(self):
         """Stops excavator."""
+        if self.process is None or self.process.poll() is not None:
+            return
+
         # stop all running workers
         for (algorithm, device) in self.running_workers.keys():
             self.stop_work(algorithm, device)
@@ -216,6 +245,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
         self.excavator_algorithm = excavator_algorithm
         self.devices = set()
 
+    @miner.needs_miner_running
     def set_devices(self, devices):
         old = self.devices
         new = set(devices)
@@ -241,6 +271,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
         else:
             self.devices.remove(device)
 
+    @miner.needs_miner_running
     def current_speeds(self):
         try:
             workers = [self.parent.server.device_speeds(device)
@@ -262,16 +293,26 @@ class Excavator(miner.Miner):
             runnable = ExcavatorAlgorithm(self, algorithm)
             self.algorithms.append(runnable)
 
-    def load(self):
         auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
                             self.settings['nicehash']['workername'])
         self.server = ExcavatorServer(self.settings['excavator']['path'],
                                       self.settings['excavator']['port'],
                                       self.settings['nicehash']['region'],
                                       auth)
+
+    def load(self):
         self.server.start()
 
     def unload(self):
         self.server.stop()
         self.server = None
+
+    def reload(self):
+        self.server.restart()
+
+    def is_running(self):
+        if self.server.process is not None and self.server.process.poll() is None:
+            return self.server._test_connection()
+        else:
+            return False
 

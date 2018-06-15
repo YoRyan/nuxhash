@@ -189,10 +189,9 @@ def do_mining(nx_settings, nx_benchmarks, nx_devices):
         except (HTTPError, URLError, socket.error, socket.timeout):
             pass
 
-    # TODO manage miners more gracefully
-    excavator = miners.excavator.Excavator(nx_settings, stratums)
-    excavator.load()
-    algorithms = excavator.algorithms
+    # initialize miners
+    nx_miners = [miners.excavator.Excavator(nx_settings, stratums)]
+    algorithms = sum([miner.algorithms for miner in nx_miners], [])
 
     # quit signal
     quit = Event()
@@ -238,6 +237,10 @@ def do_mining(nx_settings, nx_benchmarks, nx_devices):
         # wait for specified interval
         quit.wait(nx_settings['switching']['interval'])
 
+        # probe miner status
+        for algorithm in current_algorithm.values():
+            algorithm.restart_miner_if_needed()
+
         # query nicehash profitability data again
         try:
             mbtc_per_hash = nicehash.simplemultialgo_info(nx_settings)[0]
@@ -253,7 +256,8 @@ def do_mining(nx_settings, nx_benchmarks, nx_devices):
             logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
 
     logging.info('Cleaning up')
-    excavator.unload()
+    for miner in nx_miners:
+        miner.unload()
 
 if __name__ == '__main__':
     main()
