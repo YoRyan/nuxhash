@@ -140,7 +140,7 @@ def run_all_benchmarks(nx_settings, nx_devices):
     nx_benchmarks = {d: {} for d in nx_devices}
     for device in sorted(nx_devices, key=str):
         if isinstance(device, devices.nvidia.NvidiaDevice):
-            print '\nCUDA device %d: %s' % (device.cuda_index, device.name)
+            print '\nCUDA device: %s (%s)' % (device.name, device.uuid)
 
         for algorithm in algorithms:
             status_dot = [-1]
@@ -177,7 +177,7 @@ def run_all_benchmarks(nx_settings, nx_devices):
 def list_devices(nx_devices):
     for d in sorted(nx_devices, key=str):
         if isinstance(d, devices.nvidia.NvidiaDevice):
-            print 'CUDA device %d (%s): %s' % (d.cuda_index, d.uuid, d.name)
+            print 'CUDA device: %s (%s)' % (d.name, d.uuid)
 
 def do_mining(nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
