@@ -23,7 +23,8 @@ ALGORITHMS = [
     'keccak',
     'neoscrypt',
     #'nist5',
-    'cryptonightV7'
+    'cryptonightV7',
+    'lyra2z'
     ]
 
 class ExcavatorError(Exception):
