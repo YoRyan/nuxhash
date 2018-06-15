@@ -17,13 +17,15 @@ class MinerNotResponding(MinerException):
         self.failure = failure
 
 class Miner(object):
-    def __init__(self, settings, stratums):
+    def __init__(self, config_dir, settings):
         # list of runnable algorithms supplied by this miner
         self.algorithms = []
+        # configuration directory, for accessing downloaded miners
+        self.config_dir = config_dir
         # current state of settings
         self.settings = settings
-        # dict of algorithm name -> nicehash stratum uri
-        self.stratums = stratums
+        # dict of algorithm name -> nicehash stratum uri; set later
+        self.stratums = {}
     def load(self):
         """Initialize the mining program if necessary (e.g. start a server)."""
         pass

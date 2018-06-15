@@ -2,6 +2,7 @@
 
 import benchmarks
 import devices.nvidia
+import download.downloads
 import miners.excavator
 import nicehash
 import settings
@@ -68,14 +69,22 @@ def main():
         nx_settings['nicehash']['workername'] = workername
         nx_settings['nicehash']['region'] = region
 
+    # download and initialize miners
+    downloadables = download.downloads.make_miners(config_dir)
+    for d in downloadables:
+        if not d.verify():
+            logging.info('Downloading %s' % d.name)
+            d.download()
+    nx_miners = [miners.excavator.Excavator(config_dir, nx_settings)]
+
     if args.benchmark_all:
-        new_benchmarks = run_all_benchmarks(nx_settings, all_devices)
+        new_benchmarks = run_all_benchmarks(nx_miners, nx_settings, all_devices)
         for d in new_benchmarks:
             nx_benchmarks[d].update(new_benchmarks[d])
     elif args.list_devices:
         list_devices(all_devices)
     else:
-        do_mining(nx_settings, nx_benchmarks, all_devices)
+        do_mining(nx_miners, nx_settings, nx_benchmarks, all_devices)
 
     # save to config directory
     save_persistent_data(config_dir, nx_settings, nx_benchmarks)
@@ -129,14 +138,14 @@ def initial_setup():
 
     return wallet, workername, region
 
-def run_all_benchmarks(nx_settings, nx_devices):
+def run_all_benchmarks(nx_miners, nx_settings, nx_devices):
     print 'Querying NiceHash for miner connection information...'
     stratums = nicehash.simplemultialgo_info(nx_settings)[1]
 
-    # TODO manage miners more gracefully
-    excavator = miners.excavator.Excavator(nx_settings, stratums)
-    excavator.load()
-    algorithms = excavator.algorithms
+    algorithms = sum([miner.algorithms for miner in nx_miners], [])
+    for miner in nx_miners:
+        miner.stratums = stratums
+        miner.load()
 
     nx_benchmarks = {d: {} for d in nx_devices}
     for device in sorted(nx_devices, key=str):
@@ -171,7 +180,8 @@ def run_all_benchmarks(nx_settings, nx_devices):
                 print '  %s: %s                      ' % (algorithm.name,
                                                           utils.format_speeds(average_speeds))
 
-    excavator.unload()
+    for miner in nx_miners:
+        miner.unload()
 
     return nx_benchmarks
 
@@ -180,7 +190,7 @@ def list_devices(nx_devices):
         if isinstance(d, devices.nvidia.NvidiaDevice):
             print 'CUDA device: %s (%s)' % (d.name, d.uuid)
 
-def do_mining(nx_settings, nx_benchmarks, nx_devices):
+def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
     logging.info('Querying NiceHash for miner connection information...')
     mbtc_per_hash = stratums = None
@@ -191,7 +201,8 @@ def do_mining(nx_settings, nx_benchmarks, nx_devices):
             pass
 
     # initialize miners
-    nx_miners = [miners.excavator.Excavator(nx_settings, stratums)]
+    for miner in nx_miners:
+        miner.stratums = stratums
     algorithms = sum([miner.algorithms for miner in nx_miners], [])
 
     # quit signal

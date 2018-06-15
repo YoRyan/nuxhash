@@ -285,8 +285,8 @@ class ExcavatorAlgorithm(miner.Algorithm):
                     for algorithm in self.excavator_algorithm.split('_')]
 
 class Excavator(miner.Miner):
-    def __init__(self, settings, stratums):
-        super(Excavator, self).__init__(settings, stratums)
+    def __init__(self, config_dir, settings):
+        super(Excavator, self).__init__(config_dir, settings)
 
         self.server = None
         for algorithm in ALGORITHMS:
@@ -295,7 +295,8 @@ class Excavator(miner.Miner):
 
         auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
                             self.settings['nicehash']['workername'])
-        self.server = ExcavatorServer(self.settings['excavator']['path'],
+        executable = str(config_dir/'excavator'/'excavator')
+        self.server = ExcavatorServer(executable,
                                       self.settings['excavator']['port'],
                                       self.settings['nicehash']['region'],
                                       auth)
