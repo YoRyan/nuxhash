@@ -7,6 +7,7 @@ import nicehash
 import settings
 import utils
 
+from pathlib2 import Path
 from ssl import SSLError
 from threading import Event
 from time import sleep
@@ -40,7 +41,7 @@ def main():
     argp.add_argument('--show-mining', action='store_true',
                       help='print output from mining processes, implies --verbose')
     args = argp.parse_args()
-    config_dir = args.configdir[0]
+    config_dir = Path(args.configdir[0])
 
     # initiate logging
     if args.benchmark_all:
@@ -81,7 +82,7 @@ def main():
 
 def load_persistent_data(config_dir, nx_devices):
     try:
-        settings_fd = open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'r')
+        settings_fd = open(str(config_dir/SETTINGS_FILENAME), 'r')
     except IOError as err:
         if err.errno != 2: # file not found
             raise
@@ -92,7 +93,7 @@ def load_persistent_data(config_dir, nx_devices):
 
     nx_benchmarks = {d: {} for d in nx_devices}
     try:
-        benchmarks_fd = open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'r')
+        benchmarks_fd = open(str(config_dir/BENCHMARKS_FILENAME), 'r')
     except IOError as err:
         if err.errno != 2:
             raise
@@ -106,15 +107,15 @@ def load_persistent_data(config_dir, nx_devices):
 
 def save_persistent_data(config_dir, nx_settings, nx_benchmarks):
     try:
-        os.makedirs(config_dir)
+        os.makedirs(str(config_dir))
     except OSError:
-        if not os.path.isdir(config_dir):
+        if not os.path.isdir(str(config_dir)):
             raise
 
-    with open('%s/%s' % (config_dir, SETTINGS_FILENAME), 'w') as settings_fd:
+    with open(str(config_dir/SETTINGS_FILENAME), 'w') as settings_fd:
         settings.write_to_file(settings_fd, nx_settings)
 
-    with open('%s/%s' % (config_dir, BENCHMARKS_FILENAME), 'w') as benchmarks_fd:
+    with open(str(config_dir/BENCHMARKS_FILENAME), 'w') as benchmarks_fd:
         benchmarks.write_to_file(benchmarks_fd, nx_benchmarks)
 
 def initial_setup():
