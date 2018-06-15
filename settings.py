@@ -14,6 +14,10 @@ DEFAULT_SETTINGS = {
     'switching': {
         'interval': 60,
         'threshold': 0.1
+        },
+    'benchmark': {
+        'warmup_secs': 240,
+        'benchmark_secs': 60
         }
     }
 
@@ -44,6 +48,11 @@ def read_from_file(fd):
     switching['interval'] = get_option(parser.getint, 'switching', 'interval')
     switching['threshold'] = get_option(parser.getfloat, 'switching', 'threshold')
     settings['switching'] = switching
+
+    benchmark = {}
+    switching['warmup_secs'] = get_option(parser.getint, 'benchmark', 'warmup_secs')
+    switching['benchmark_secs'] = get_option(parser.getint, 'benchmark', 'benchmark_secs')
+    settings['benchmark'] = benchmark
 
     return settings
 
