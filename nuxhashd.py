@@ -208,7 +208,7 @@ def run_benchmark(device, algorithm):
 def list_devices(nx_devices):
     for d in sorted(nx_devices, key=str):
         if isinstance(d, devices.nvidia.NvidiaDevice):
-            print 'CUDA device %s (%s): %s' % (d.cuda_index, d.uuid, d.name)
+            print 'CUDA device %s: %s (%s)' % (d.cuda_index, d.name, d.uuid)
 
 def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
