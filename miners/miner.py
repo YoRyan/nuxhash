@@ -8,16 +8,13 @@ class MinerException(Exception):
     pass
 
 class MinerStartFailed(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
+    pass
 
 class MinerNotRunning(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
+    pass
 
 class MinerNotResponding(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
+    pass
 
 class Miner(object):
     def __init__(self, config_dir, settings):

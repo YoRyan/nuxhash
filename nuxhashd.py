@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+from miners.miner import MinerNotRunning
 import benchmarks
 import devices.nvidia
 import download.downloads
@@ -179,6 +180,9 @@ def run_benchmarks(targets):
             last_device = device
         try:
             benchmarks[device][algorithm.name] = run_benchmark(device, algorithm)
+        except MinerNotRunning:
+            print '  %s: failed to complete benchmark     ' % algorithm.name
+            benchmarks[device][algorithm.name] = [0]*len(algorithm.algorithms)
         except KeyboardInterrupt:
             print 'Benchmarking aborted (completed benchmarks saved).'
             break

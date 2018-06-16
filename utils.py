@@ -1,3 +1,5 @@
+from miners.miner import MinerNotRunning
+
 from time import sleep
 
 def format_speed(s):
@@ -45,12 +47,16 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
     algorithm.set_devices([device])
     # warmup period
     for i in range(warmup_duration/SAMPLE_INTERVAL):
+        if not algorithm.parent.is_running():
+            raise MinerNotRunning
         sample = algorithm.current_speeds()
         sample_callback(sample, i*SAMPLE_INTERVAL - warmup_duration)
         sleep(SAMPLE_INTERVAL)
     # actual sampling
     samples = []
     for i in range(sample_duration/SAMPLE_INTERVAL):
+        if not algorithm.parent.is_running():
+            raise MinerNotRunning
         sample = algorithm.current_speeds()
         samples.append(sample)
         sample_callback(sample, sample_duration - i*SAMPLE_INTERVAL)
