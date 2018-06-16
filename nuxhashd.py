@@ -26,8 +26,7 @@ DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
 SETTINGS_FILENAME = 'settings.conf'
 BENCHMARKS_FILENAME = 'benchmarks.json'
 
-BENCHMARK_WARMUP_SECS = 240
-BENCHMARK_SECS = 60
+BENCHMARK_SECS = 90
 
 def main():
     # parse commmand-line arguments
@@ -200,7 +199,7 @@ def run_benchmark(device, algorithm):
                     utils.format_time(secs_remaining))),
         sys.stdout.flush()
     speeds = utils.run_benchmark(algorithm, device,
-                                 BENCHMARK_WARMUP_SECS, BENCHMARK_SECS,
+                                 algorithm.warmup_secs, BENCHMARK_SECS,
                                  sample_callback=report_speeds)
     print '  %s: %s                      ' % (algorithm.name,
                                               utils.format_speeds(speeds))

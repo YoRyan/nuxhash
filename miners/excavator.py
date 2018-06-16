@@ -238,11 +238,12 @@ class ESAlgorithm(ESResource):
         self.server.send_command('algorithm.remove', self.params)
 
 class ExcavatorAlgorithm(miner.Algorithm):
-    def __init__(self, parent, excavator_algorithm):
+    def __init__(self, parent, excavator_algorithm, **kwargs):
         algorithms = excavator_algorithm.lower().split('_')
         super(ExcavatorAlgorithm, self).__init__(parent,
                                                  name='excavator_%s' % excavator_algorithm,
-                                                 algorithms=algorithms)
+                                                 algorithms=algorithms,
+                                                 **kwargs)
         self.excavator_algorithm = excavator_algorithm
         self.devices = set()
 
@@ -291,7 +292,11 @@ class Excavator(miner.Miner):
 
         self.server = None
         for algorithm in ALGORITHMS:
-            runnable = ExcavatorAlgorithm(self, algorithm)
+            if 'daggerhashimoto' in algorithm:
+                warmup_secs = miner.LONG_WARMUP_SECS
+            else:
+                warmup_secs = miner.SHORT_WARMUP_SECS
+            runnable = ExcavatorAlgorithm(self, algorithm, warmup_secs=warmup_secs)
             self.algorithms.append(runnable)
 
         auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],

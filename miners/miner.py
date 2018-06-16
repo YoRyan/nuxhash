@@ -1,6 +1,9 @@
 import logging
 from functools import wraps
 
+SHORT_WARMUP_SECS = 60
+LONG_WARMUP_SECS = 300
+
 class MinerException(Exception):
     pass
 
@@ -40,13 +43,15 @@ class Miner(object):
         pass
 
 class Algorithm(object):
-    def __init__(self, parent, name, algorithms):
+    def __init__(self, parent, name, algorithms, warmup_secs=SHORT_WARMUP_SECS):
         self.parent = parent
         # human-readable name for the benchmark records
         self.name = name
         # list of algorithms run (for multialgorithms; same order as reported
         # speeds)
         self.algorithms = algorithms
+        # warmup time for benchmarking purposes (either short or long)
+        self.warmup_secs = warmup_secs
 
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)
