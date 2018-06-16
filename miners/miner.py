@@ -1,6 +1,9 @@
 import logging
 from functools import wraps
 
+SHORT_WARMUP_SECS = 60
+LONG_WARMUP_SECS = 300
+
 class MinerException(Exception):
     pass
 
@@ -17,13 +20,15 @@ class MinerNotResponding(MinerException):
         self.failure = failure
 
 class Miner(object):
-    def __init__(self, settings, stratums):
+    def __init__(self, config_dir, settings):
         # list of runnable algorithms supplied by this miner
         self.algorithms = []
+        # configuration directory, for accessing downloaded miners
+        self.config_dir = config_dir
         # current state of settings
         self.settings = settings
-        # dict of algorithm name -> nicehash stratum uri
-        self.stratums = stratums
+        # dict of algorithm name -> nicehash stratum uri; set later
+        self.stratums = {}
     def load(self):
         """Initialize the mining program if necessary (e.g. start a server)."""
         pass
@@ -38,13 +43,15 @@ class Miner(object):
         pass
 
 class Algorithm(object):
-    def __init__(self, parent, name, algorithms):
+    def __init__(self, parent, name, algorithms, warmup_secs=SHORT_WARMUP_SECS):
         self.parent = parent
         # human-readable name for the benchmark records
         self.name = name
         # list of algorithms run (for multialgorithms; same order as reported
         # speeds)
         self.algorithms = algorithms
+        # warmup time for benchmarking purposes (either short or long)
+        self.warmup_secs = warmup_secs
 
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)

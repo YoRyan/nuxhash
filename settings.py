@@ -8,7 +8,6 @@ DEFAULT_SETTINGS = {
         },
     'excavator': {
         'enabled': True,
-        'path': '/opt/excavator/bin/excavator',
         'port': 3456
         },
     'switching': {
@@ -36,7 +35,6 @@ def read_from_file(fd):
 
     excavator = {}
     excavator['enabled'] = get_option(parser.getboolean, 'excavator', 'enabled')
-    excavator['path'] = get_option(parser.get, 'excavator', 'path')
     excavator['port'] = get_option(parser.getint, 'excavator', 'port')
     settings['excavator'] = excavator
 

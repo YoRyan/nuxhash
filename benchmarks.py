@@ -1,17 +1,13 @@
 import json
+from collections import defaultdict
 
 def read_from_file(fd, devices):
-    benchmarks = {}
+    benchmarks = defaultdict(lambda: {})
     js = json.load(fd, 'ascii')
 
-    device_instances = lambda s: [d for d in devices if str(d) == s]
-
     for js_device in js:
-        matches = device_instances(js_device)
-        if len(matches) > 0:
-            # this entry maps to a detected device
-            device = matches[0]
-            benchmarks[device] = {}
+        device = next((d for d in devices if str(d) == js_device), None)
+        if device is not None:
             # read speeds
             js_speeds = js[js_device]
             for algorithm in js_speeds:

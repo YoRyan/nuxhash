@@ -23,7 +23,8 @@ ALGORITHMS = [
     'keccak',
     'neoscrypt',
     #'nist5',
-    'cryptonightV7'
+    'cryptonightV7',
+    'lyra2z'
     ]
 
 class ExcavatorError(Exception):
@@ -237,11 +238,12 @@ class ESAlgorithm(ESResource):
         self.server.send_command('algorithm.remove', self.params)
 
 class ExcavatorAlgorithm(miner.Algorithm):
-    def __init__(self, parent, excavator_algorithm):
+    def __init__(self, parent, excavator_algorithm, **kwargs):
         algorithms = excavator_algorithm.lower().split('_')
         super(ExcavatorAlgorithm, self).__init__(parent,
                                                  name='excavator_%s' % excavator_algorithm,
-                                                 algorithms=algorithms)
+                                                 algorithms=algorithms,
+                                                 **kwargs)
         self.excavator_algorithm = excavator_algorithm
         self.devices = set()
 
@@ -285,17 +287,22 @@ class ExcavatorAlgorithm(miner.Algorithm):
                     for algorithm in self.excavator_algorithm.split('_')]
 
 class Excavator(miner.Miner):
-    def __init__(self, settings, stratums):
-        super(Excavator, self).__init__(settings, stratums)
+    def __init__(self, config_dir, settings):
+        super(Excavator, self).__init__(config_dir, settings)
 
         self.server = None
         for algorithm in ALGORITHMS:
-            runnable = ExcavatorAlgorithm(self, algorithm)
+            if 'daggerhashimoto' in algorithm:
+                warmup_secs = miner.LONG_WARMUP_SECS
+            else:
+                warmup_secs = miner.SHORT_WARMUP_SECS
+            runnable = ExcavatorAlgorithm(self, algorithm, warmup_secs=warmup_secs)
             self.algorithms.append(runnable)
 
         auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
                             self.settings['nicehash']['workername'])
-        self.server = ExcavatorServer(self.settings['excavator']['path'],
+        executable = str(config_dir/'excavator'/'excavator')
+        self.server = ExcavatorServer(executable,
                                       self.settings['excavator']['port'],
                                       self.settings['nicehash']['region'],
                                       auth)
