@@ -60,10 +60,6 @@ class Algorithm(object):
     def current_speeds(self):
         pass
 
-    def restart_miner_if_needed(self):
-        if not self.parent.is_running():
-            self.parent.reload()
-
 # helper decorator for Algorithm methods
 def needs_miner_running(method):
     @wraps(method)

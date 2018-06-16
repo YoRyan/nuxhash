@@ -275,7 +275,9 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
 
         # probe miner status
         for algorithm in current_algorithm.values():
-            algorithm.restart_miner_if_needed()
+            if not algorithm.parent.is_running():
+                logging.error('Detected %s crash, restarting miner' % algorithm.name)
+                algorithm.parent.reload()
 
         # query nicehash profitability data again
         try:
