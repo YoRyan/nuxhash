@@ -175,7 +175,7 @@ def run_benchmarks(targets):
     for device, algorithm in sorted(targets, key=lambda t: str(t[0])):
         if device != last_device:
             if isinstance(device, devices.nvidia.NvidiaDevice):
-                print '\nCUDA device: %s (%s)' % (device.name, device.uuid)
+                print '\nCUDA device %s: %s (%s)' % (device.cuda_index, device.name, device.uuid)
             last_device = device
         try:
             benchmarks[device][algorithm.name] = run_benchmark(device, algorithm)
