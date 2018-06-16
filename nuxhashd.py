@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+from miners.miner import MinerNotRunning
 import benchmarks
 import devices.nvidia
 import download.downloads
@@ -179,6 +180,9 @@ def run_benchmarks(targets):
             last_device = device
         try:
             benchmarks[device][algorithm.name] = run_benchmark(device, algorithm)
+        except MinerNotRunning:
+            print '  %s: failed to complete benchmark     ' % algorithm.name
+            benchmarks[device][algorithm.name] = [0]*len(algorithm.algorithms)
         except KeyboardInterrupt:
             print 'Benchmarking aborted (completed benchmarks saved).'
             break
@@ -271,7 +275,9 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
 
         # probe miner status
         for algorithm in current_algorithm.values():
-            algorithm.restart_miner_if_needed()
+            if not algorithm.parent.is_running():
+                logging.error('Detected %s crash, restarting miner' % algorithm.name)
+                algorithm.parent.reload()
 
         # query nicehash profitability data again
         try:

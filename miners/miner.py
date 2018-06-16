@@ -8,16 +8,13 @@ class MinerException(Exception):
     pass
 
 class MinerStartFailed(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
+    pass
 
 class MinerNotRunning(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
+    pass
 
 class MinerNotResponding(MinerException):
-    def __init__(self, failure):
-        self.failure = failure
+    pass
 
 class Miner(object):
     def __init__(self, config_dir, settings):
@@ -62,10 +59,6 @@ class Algorithm(object):
 
     def current_speeds(self):
         pass
-
-    def restart_miner_if_needed(self):
-        if not self.parent.is_running():
-            self.parent.reload()
 
 # helper decorator for Algorithm methods
 def needs_miner_running(method):
