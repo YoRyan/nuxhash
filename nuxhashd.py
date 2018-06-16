@@ -82,7 +82,7 @@ def main():
 
     if args.benchmark_all:
         nx_benchmarks = run_missing_benchmarks(nx_miners, nx_settings, all_devices,
-                                               {})
+                                               defaultdict(lambda: {}))
     elif args.benchmark_missing:
         nx_benchmarks = run_missing_benchmarks(nx_miners, nx_settings, all_devices,
                                                nx_benchmarks)
