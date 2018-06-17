@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 
 from miners.miner import MinerNotRunning
-import benchmarks
 import devices.nvidia
 import download.downloads
 import miners.excavator
@@ -23,10 +22,6 @@ import signal
 import socket
 import sys
 
-DEFAULT_CONFIGDIR = os.path.expanduser('~/.config/nuxhash')
-SETTINGS_FILENAME = 'settings.conf'
-BENCHMARKS_FILENAME = 'benchmarks.json'
-
 BENCHMARK_SECS = 90
 
 def main():
@@ -43,7 +38,7 @@ def main():
                       help='print more information to the console log')
     argp.add_argument('--show-mining', action='store_true',
                       help='print output from mining processes, implies --verbose')
-    argp.add_argument('-c', '--configdir', nargs=1, default=[DEFAULT_CONFIGDIR],
+    argp.add_argument('-c', '--configdir', nargs=1, default=[settings.DEFAULT_CONFIGDIR],
                       help='directory for configuration and benchmark files (default: ~/.config/nuxhash/)')
     args = argp.parse_args()
     config_dir = Path(args.configdir[0])
@@ -64,7 +59,7 @@ def main():
     all_devices = nvidia_devices
 
     # load from config directory
-    nx_settings, nx_benchmarks = load_persistent_data(config_dir, all_devices)
+    nx_settings, nx_benchmarks = settings.load_persistent_data(config_dir, all_devices)
 
     # if no wallet configured, do initial setup prompts
     if nx_settings['nicehash']['wallet'] == '':
@@ -93,45 +88,7 @@ def main():
         do_mining(nx_miners, nx_settings, nx_benchmarks, all_devices)
 
     # save to config directory
-    save_persistent_data(config_dir, nx_settings, nx_benchmarks)
-
-def load_persistent_data(config_dir, nx_devices):
-    try:
-        settings_fd = open(str(config_dir/SETTINGS_FILENAME), 'r')
-    except IOError as err:
-        if err.errno != 2: # file not found
-            raise
-        nx_settings = settings.DEFAULT_SETTINGS
-    else:
-        nx_settings = settings.read_from_file(settings_fd)
-        settings_fd.close()
-
-    nx_benchmarks = {d: {} for d in nx_devices}
-    try:
-        benchmarks_fd = open(str(config_dir/BENCHMARKS_FILENAME), 'r')
-    except IOError as err:
-        if err.errno != 2:
-            raise
-    else:
-        saved_benchmarks = benchmarks.read_from_file(benchmarks_fd, nx_devices)
-        for d in saved_benchmarks:
-            nx_benchmarks[d].update(saved_benchmarks[d])
-        benchmarks_fd.close()
-
-    return nx_settings, nx_benchmarks
-
-def save_persistent_data(config_dir, nx_settings, nx_benchmarks):
-    try:
-        os.makedirs(str(config_dir))
-    except OSError:
-        if not os.path.isdir(str(config_dir)):
-            raise
-
-    with open(str(config_dir/SETTINGS_FILENAME), 'w') as settings_fd:
-        settings.write_to_file(settings_fd, nx_settings)
-
-    with open(str(config_dir/BENCHMARKS_FILENAME), 'w') as benchmarks_fd:
-        benchmarks.write_to_file(benchmarks_fd, nx_benchmarks)
+    settings.save_persistent_data(config_dir, nx_settings, nx_benchmarks)
 
 def initial_setup():
     print 'nuxhashd initial setup'
