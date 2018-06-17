@@ -13,7 +13,6 @@ DEFAULT_SETTINGS = {
         'wallet': '',
         'workername': 'nuxhash',
         'region': 'usa',
-        'units': 'mBTC'
         },
     'excavator': {
         'enabled': True,
@@ -22,6 +21,9 @@ DEFAULT_SETTINGS = {
     'switching': {
         'interval': 60,
         'threshold': 0.1
+        },
+    'gui': {
+        'units': 'mBTC'
         }
     }
 
@@ -40,7 +42,6 @@ def read_settings_from_file(fd):
     nicehash['wallet'] = get_option(parser.get, 'nicehash', 'wallet')
     nicehash['workername'] = get_option(parser.get, 'nicehash', 'workername')
     nicehash['region'] = get_option(parser.get, 'nicehash', 'region')
-    nicehash['units'] = get_option(parser.get, 'nicehash', 'units')
     settings['nicehash'] = nicehash
 
     excavator = {}
@@ -52,6 +53,10 @@ def read_settings_from_file(fd):
     switching['interval'] = get_option(parser.getint, 'switching', 'interval')
     switching['threshold'] = get_option(parser.getfloat, 'switching', 'threshold')
     settings['switching'] = switching
+
+    gui = {}
+    gui['units'] = get_option(parser.get, 'gui', 'units')
+    settings['gui'] = gui
 
     return settings
 
