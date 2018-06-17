@@ -133,7 +133,7 @@ def run_benchmarks(targets):
     for device, algorithm in sorted(targets, key=lambda t: str(t[0])):
         if device != last_device:
             if isinstance(device, devices.nvidia.NvidiaDevice):
-                print '\nCUDA device: %s (%s)' % (device.name, device.uuid)
+                print '\nCUDA device %s: %s (%s)' % (device.cuda_index, device.name, device.uuid)
             last_device = device
         try:
             benchmarks[device][algorithm.name] = run_benchmark(device, algorithm)
@@ -169,7 +169,7 @@ def run_benchmark(device, algorithm):
 def list_devices(nx_devices):
     for d in sorted(nx_devices, key=str):
         if isinstance(d, devices.nvidia.NvidiaDevice):
-            print 'CUDA device: %s (%s)' % (d.name, d.uuid)
+            print 'CUDA device %s: %s (%s)' % (d.cuda_index, d.name, d.uuid)
 
 def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
