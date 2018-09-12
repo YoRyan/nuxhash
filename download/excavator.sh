@@ -5,7 +5,7 @@ MD5='270b14d9a177397b58f5e6696021ed4d'
 
 case "$1" in
 verify)
-        [ -f excavator ] && [ `md5sum excavator | awk '{print $1}'` == "$MD5" ]
+        [ -f excavator ] && [ `md5sum excavator | awk '{print $1}'` = "$MD5" ]
         exit $?
         ;;
 download)
