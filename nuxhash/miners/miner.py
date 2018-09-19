@@ -53,8 +53,14 @@ class Algorithm(object):
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)
 
+    # set_devices and benchmark_devices should be mutually-exclusive operations
+
     def set_devices(self, devices):
         """Run this algorithm on the set of devices."""
+        pass
+
+    def benchmark_devices(self, devices):
+        """Run this algorithm on the set of devices in benchmark mode."""
         pass
 
     def current_speeds(self):
