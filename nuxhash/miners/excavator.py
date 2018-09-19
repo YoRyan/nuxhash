@@ -282,8 +282,8 @@ class ExcavatorAlgorithm(miner.Algorithm):
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
         else:
-            total_speed = lambda algorithm: sum([w[algorithm] for w in workers
-                                                 if algorithm in w])
+            def total_speed(algorithm): return sum([w[algorithm]
+                                                   for w in workers if algorithm in w])
             return [total_speed(algorithm)
                     for algorithm in self.excavator_algorithm.split('_')]
 

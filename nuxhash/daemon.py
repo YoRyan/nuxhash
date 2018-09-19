@@ -103,7 +103,7 @@ def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
     stratums = nicehash.simplemultialgo_info(settings)[1]
 
     algorithms = sum([miner.algorithms for miner in miners], [])
-    algorithm = lambda name: next((a for a in algorithms if a.name == name), None)
+    def algorithm(name): return next((a for a in algorithms if a.name == name), None)
     for miner in miners:
         miner.stratums = stratums
         miner.load()
