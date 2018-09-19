@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 import devices.nvidia
 import settings
 
@@ -235,7 +233,7 @@ def set_choice(wx_choice, options, value, fallback=None):
     else:
         wx_choice.SetSelection(0)
 
-if __name__ == '__main__':
+def main():
     app = wx.App(False)
     frame = MainWindow(None, title='nuxhash')
     frame.Show()

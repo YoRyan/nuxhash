@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 from miners.miner import MinerNotRunning
 import devices.nvidia
 import download.downloads
@@ -253,7 +251,4 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     logging.info('Cleaning up')
     for miner in nx_miners:
         miner.unload()
-
-if __name__ == '__main__':
-    main()
 

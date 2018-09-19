@@ -3,10 +3,12 @@ import subprocess
 from pathlib2 import Path
 from shutil import rmtree
 
+downloads_path = Path(os.path.dirname(__file__))/'downloadables'
+
 class Downloadable(object):
     def __init__(self, config_dir, dir_name, script_name, name):
         self.dir = config_dir/dir_name
-        self.script = Path(os.path.dirname(__file__))/script_name
+        self.script = downloads_path/script_name
         self.name = name
     def run_script(self, *args):
         return subprocess.call([str(self.script)] + list(args), cwd=str(self.dir))
