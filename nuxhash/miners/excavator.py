@@ -11,20 +11,21 @@ ALGORITHMS = [
     'equihash',
     'pascal',
     'decred',
-    'sia',
-    'lbry',
+    #'sia',
+    #'lbry',
     'blake2s',
     'daggerhashimoto',
     'lyra2rev2',
     'daggerhashimoto_decred',
-    'daggerhashimoto_sia',
+    #'daggerhashimoto_sia',
     'daggerhashimoto_pascal',
     #'cryptonight',
     'keccak',
     'neoscrypt',
     #'nist5',
     'cryptonightV7',
-    'lyra2z'
+    'lyra2z',
+    'x16r'
     ]
 
 class ExcavatorError(Exception):
