@@ -160,7 +160,7 @@ class ExcavatorServer(object):
     def _test_connection(self):
         try:
             self.send_command('info', [])
-        except (socket.error, socket.timeout):
+        except (socket.error, socket.timeout, ValueError):
             return False
         else:
             return True
