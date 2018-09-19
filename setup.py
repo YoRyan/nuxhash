@@ -176,6 +176,7 @@ setup(
     entry_points={  # Optional
         'console_scripts': [
             'nuxhashd=nuxhash:nuxhashd',
+            'nuxhash-gui=nuxhash:nuxhash_gui'
         ],
     },
 
