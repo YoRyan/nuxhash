@@ -4,9 +4,11 @@ import download.downloads
 import miners.excavator
 import nicehash
 import settings
+import switching.naive
 import utils
 
 from collections import defaultdict
+from datetime import datetime
 from pathlib2 import Path
 from ssl import SSLError
 from threading import Event
@@ -172,53 +174,47 @@ def list_devices(nx_devices):
 def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
     logging.info('Querying NiceHash for miner connection information...')
-    mbtc_per_hash = stratums = None
+    mbtc_per_hash = download_time = stratums = None
     while mbtc_per_hash is None:
         try:
             mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
         except (HTTPError, URLError, socket.error, socket.timeout):
             pass
+        else:
+            download_time = datetime.now()
 
     # initialize miners
     for miner in nx_miners:
         miner.stratums = stratums
     algorithms = sum([miner.algorithms for miner in nx_miners], [])
 
+    # initialize profit-switching
+    profit_switch = switching.naive.NaiveSwitcher(nx_settings)
+    profit_switch.reset()
+
     # quit signal
     quit = Event()
     signal.signal(signal.SIGINT, lambda signum, frame: quit.set())
 
     current_algorithm = {d: None for d in nx_devices}
+    revenues = {d: defaultdict(lambda: 0.0) for d in nx_devices}
     while not quit.is_set():
-        # calculate most profitable algorithm for each device
-        for device in nx_devices:
-            def mbtc_per_day(algorithm):
-                device_benchmarks = nx_benchmarks[device]
-                if algorithm.name in device_benchmarks:
-                    mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
-                                          mbtc_per_hash[algorithm.algorithms[i]]*(24*60*60)
-                                          for i in range(len(algorithm.algorithms))]
-                    return sum(mbtc_per_day_multi)
-                else:
-                    return 0
+        # calculate profitability per algorithm per device
+        def mbtc_per_day(device, algorithm):
+            device_benchmarks = nx_benchmarks[device]
+            if algorithm.name in device_benchmarks:
+                mbtc_per_day_multi = [device_benchmarks[algorithm.name][i]*
+                                      mbtc_per_hash[algorithm.algorithms[i]]*(24*60*60)
+                                      for i in range(len(algorithm.algorithms))]
+                return sum(mbtc_per_day_multi)
+            else:
+                return 0
+        revenues = {device: {algorithm: mbtc_per_day(device, algorithm)
+                             for algorithm in algorithms} for device in nx_devices}
 
-            current = current_algorithm[device]
-            maximum = max(algorithms, key=lambda a: mbtc_per_day(a))
-
-            if current is None:
-                logging.info('Assigning %s to %s (%.3f mBTC/day)' %
-                             (device, maximum.name, mbtc_per_day(maximum)))
-                current_algorithm[device] = maximum
-            elif current != maximum:
-                current_revenue = mbtc_per_day(current)
-                maximum_revenue = mbtc_per_day(maximum)
-                min_factor = 1.0 + nx_settings['switching']['threshold']
-
-                if current_revenue != 0 and maximum_revenue/current_revenue >= min_factor:
-                    logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)' %
-                                 (device, current.name, maximum.name,
-                                  current_revenue, maximum_revenue))
-                    current_algorithm[device] = maximum
+        # get algorithm assignments from the profit switcher
+        profit_switch.input_revenues(revenues, download_time)
+        current_algorithm = profit_switch.assign_algorithms()
 
         # attach devices to respective algorithms atomically
         for algorithm in algorithms:
@@ -247,6 +243,8 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
             logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
         except (ValueError, KeyError):
             logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
+        else:
+            download_time = datetime.now()
 
     logging.info('Cleaning up')
     for miner in nx_miners:
