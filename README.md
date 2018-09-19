@@ -1,28 +1,45 @@
-nuxhash is a NiceHash cryptocurrency mining client for Linux. It is very early
-software that will break spectacularly if you be mean to it.
+nuxhash is a [NiceHash](https://nicehash.com) cryptocurrency mining client for
+Linux. Like NiceHash's official Windows software, it uses NiceHash's proprietary
+[excavator](https://github.com/nicehash/excavator) program to perform hashes of
+the most profitable algorithm(s) for each card.
 
-nuxhash currently consists of a lightweight daemon, nuxhashd, that manages miners
-and selects the most profitable algorithm for you. Only Nvidia devices and
-[NiceHash excavator](https://github.com/nicehash/excavator) are supported.
+At the moment, nuxhash is super-early alpha software, but it's already usable
+for headless mining on Nvidia cards.
 
-In the future, there will be support for AMD devices, more miners, a GUI version,
-and an opt-out 0.5% donation fee.
+## Roadmap
 
-What will never be implemented: Overclocking control, though a hook will probably
-be added to run your own scripts when changing algorithms.
+- [x] Daemon with basic mining logic
+- [x] Automatic miner downloads and integrity checking
+- [ ] Use miners' benchmark mode
+- [ ] Generalize profit-switch logic
+- [ ] Finish wx-based GUI
+- [ ] Implement other miners
+- [ ] Support AMD devices
+- [ ] Add 0.5% donation fee (opt-out)
 
-## nuxhashd Quick Start
+I have no plans to implement direct overclocking or fan control.
 
-Requirements: NiceHash excavator (installed to `/opt/excavator/bin/excavator`)
-and the proprietary nvidia driver for Linux, version 387.xx or later.
+## Quick Start (daemon)
+
+External dependencies, Ubuntu 18.04 LTS:
+
+* Nvidia's proprietary graphics driver for Linux, version 387.xx or later
+* curl (to download excavator)
+* ocl-icd-libopencl1 [(to run CUDA apps)](https://askubuntu.com/questions/1032430/opencl-with-nvidia-390-on-ubunut-18-04)
+
+Install Python package.
+
+```
+python2 setup.py install
+```
 
 Perform initial setup, run benchmarks (approx. 5 minutes/algorithm/card).
 
 ```
-$ ./nuxhashd.py --benchmark-all
+$ nuxhashd --benchmark-all
 nuxhashd initial setup
 Wallet address: 3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23
-Worker name: ATXcavator
+Worker name: nuxhashdev
 Region (eu/usa/hk/jp/in/br): usa
 
 Querying NiceHash for miner connection information...
@@ -48,7 +65,7 @@ CUDA device 0: GeForce GTX 1060 6GB
 Go mining. Remove `--show-mining` for silent operation.
 
 ```
-$ ./nuxhashd.py --show-mining
+$ nuxhashd --show-mining
 2018-02-11 15:52:23,339 INFO: Querying NiceHash for miner connection information...
 2018-02-11 15:52:23,646 DEBUG: =========================== www.nicehash.com =========================
 2018-02-11 15:52:23,646 DEBUG:            Excavator v1.4.3a_nvidia GPU Miner for NiceHash.
@@ -87,3 +104,20 @@ $ ./nuxhashd.py --show-mining
 2018-02-11 15:57:33,820 DEBUG: [15:57:33][0x00007f8225d55700][info] net | Share #10 accepted
 ```
 
+## Quick Start (graphical) (coming soon)
+
+External dependencies, Ubuntu 18.04 LTS:
+
+* python-wxgtk3.0
+
+Install Python package.
+
+```
+python2 setup.py install
+```
+
+Try it out.
+
+```
+nuxhash-gui
+```
