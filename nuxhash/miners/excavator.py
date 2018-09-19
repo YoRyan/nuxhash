@@ -365,11 +365,8 @@ class Excavator(miner.Miner):
 
         self.server = None
         for algorithm in ALGORITHMS:
-            if 'daggerhashimoto' in algorithm:
-                warmup_secs = miner.LONG_WARMUP_SECS
-            else:
-                warmup_secs = miner.SHORT_WARMUP_SECS
-            runnable = ExcavatorAlgorithm(self, algorithm, warmup_secs=warmup_secs)
+            runnable = ExcavatorAlgorithm(self, algorithm,
+                                          warmup_secs=miner.SHORT_WARMUP_SECS)
             self.algorithms.append(runnable)
 
         auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
