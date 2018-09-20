@@ -13,15 +13,6 @@ def api_call(method, params):
 
     return json.load(request, 'ascii')
 
-def algorithm_payrates():
-    response = api_call('simplemultialgo.info', {})
-
-    algorithms = response['result']['simplemultialgo']
-    payrates = {a['name']: float(a['paying']) for a in algorithms}
-    ports = {a['name']: int(a['port']) for a in algorithms}
-
-    return payrates, ports
-
 def unpaid_balance(address):
     response = api_call('stats.provider', { 'addr': address })
     balances = response['result']['stats']
