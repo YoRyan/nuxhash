@@ -213,8 +213,7 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
                              for algorithm in algorithms} for device in nx_devices}
 
         # get algorithm assignments from the profit switcher
-        profit_switch.input_revenues(revenues, download_time)
-        current_algorithm = profit_switch.assign_algorithms()
+        current_algorithm = profit_switch.decide(revenues, download_time)
 
         # attach devices to respective algorithms atomically
         for algorithm in algorithms:

@@ -7,11 +7,9 @@ class ProfitSwitcher(object):
         """(Re)initialize the profit-switching logic if necessary."""
         pass
 
-    def input_revenues(self, mbtc_per_day_per_device, timestamp):
-        """Read dict of device -> algorithm -> revenue and effective timestamp."""
-        pass
+    def decide(self, mbtc_per_day_per_device, timestamp):
+        """Read dict of device -> algorithm -> revenue and effective timestamp.
 
-    def assign_algorithms(self):
-        """Return dict of device -> algorithm."""
+        Return dict of device -> algorithm."""
         pass
 

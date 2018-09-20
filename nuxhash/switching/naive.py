@@ -6,17 +6,12 @@ import logging
 class NaiveSwitcher(ProfitSwitcher):
     def __init__(self, settings, **kwargs):
         super(NaiveSwitcher, self).__init__(settings, **kwargs)
-        # dict of device -> algorithm -> mbtc/day
-        self.current_revenues = defaultdict(lambda: defaultdict(lambda: 0.0))
         # dict of device -> algorithm
         self.last_decision = defaultdict(lambda: None)
 
-    def input_revenues(self, mbtc_per_day_per_device, timestamp):
-        self.current_revenues = mbtc_per_day_per_device
-
-    def assign_algorithms(self):
+    def decide(self, mbtc_per_day_per_device, timestamp):
         decision = {}
-        for device, revenues in self.current_revenues.iteritems():
+        for device, revenues in mbtc_per_day_per_device.iteritems():
             switch_algo, switch_revenue = max(revenues.iteritems(),
                                               key=lambda (algo, revenue): revenue)
             stay_algo = self.last_decision[device]
