@@ -10,8 +10,6 @@ for headless mining on Nvidia cards.
 
 - [x] Daemon with basic mining logic
 - [x] Automatic miner downloads and integrity checking
-- [ ] Use miners' benchmark mode
-- [ ] Generalize profit-switch logic
 - [ ] Finish wx-based GUI
 - [ ] Implement other miners
 - [ ] Support AMD devices
