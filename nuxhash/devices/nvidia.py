@@ -6,6 +6,10 @@ class NvidiaDevice(object):
         self.pci_bus = pci_bus
         self.uuid = uuid
         self.name = name
+    def __eq__(self, other):
+        return self.uuid == other.uuid
+    def __ne__(self, other):
+        return self.uuid != other.uuid
     def __str__(self):
         return 'nvidia_%s' % (self.uuid)
     def __repr__(self):
