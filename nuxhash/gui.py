@@ -1,9 +1,9 @@
-import devices.nvidia
-import settings
-
 import wx
 from copy import deepcopy
 from functools import wraps
+
+from nuxhash import settings
+from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 
 FIELD_BORDER = 10
 REGIONS = ['eu', 'usa', 'jp', 'hk']
@@ -31,8 +31,7 @@ class MainWindow(wx.Frame):
         self.load_persistent_data()
 
     def probe_devices(self):
-        nvidia_devices = devices.nvidia.enumerate_devices()
-        self.devices = nvidia_devices
+        self.devices = nvidia_devices()
 
     def load_persistent_data(self):
         nx_settings, nx_benchmarks = settings.load_persistent_data(settings.DEFAULT_CONFIGDIR,
@@ -59,21 +58,21 @@ class SettingsScreen(wx.Panel):
 
         # basic settings
         self.create_basic_form()
-        sizer.AddF(self.basic_form, sizer_flags)
+        sizer.Add(self.basic_form, sizer_flags)
 
         # divider
-        sizer.AddF(wx.StaticLine(self), wx.SizerFlags().Expand())
+        sizer.Add(wx.StaticLine(self), wx.SizerFlags().Expand())
 
         # advanced settings
         self.create_advanced_form()
-        sizer.AddF(self.advanced_form, sizer_flags)
+        sizer.Add(self.advanced_form, sizer_flags)
 
         # spacer
         sizer.AddStretchSpacer()
 
         # io controls
         self.create_io_controls()
-        sizer.AddF(self.io_controls, sizer_flags.Right())
+        sizer.Add(self.io_controls, sizer_flags.Right())
 
         self.SetSizer(sizer)
 
@@ -88,21 +87,21 @@ class SettingsScreen(wx.Panel):
                                       .Left())
 
         # wallet address
-        sizer.AddF(wx.StaticText(wrapper, label='Wallet address'), sizer_flags)
+        sizer.Add(wx.StaticText(wrapper, label='Wallet address'), sizer_flags)
         self.wallet = wx.TextCtrl(wrapper, size=(300, -1))
-        sizer.AddF(self.wallet, sizer_flags)
+        sizer.Add(self.wallet, sizer_flags)
         self.Bind(wx.EVT_TEXT, self.OnWalletChange, self.wallet)
 
         # worker name
-        sizer.AddF(wx.StaticText(wrapper, label='Worker name'), sizer_flags)
+        sizer.Add(wx.StaticText(wrapper, label='Worker name'), sizer_flags)
         self.worker = wx.TextCtrl(wrapper, size=(150, -1))
-        sizer.AddF(self.worker, sizer_flags)
+        sizer.Add(self.worker, sizer_flags)
         self.Bind(wx.EVT_TEXT, self.OnWorkerChange, self.worker)
 
         # nicehash region
-        sizer.AddF(wx.StaticText(wrapper, label='Region'), sizer_flags)
+        sizer.Add(wx.StaticText(wrapper, label='Region'), sizer_flags)
         self.region = wx.Choice(wrapper, choices=REGIONS)
-        sizer.AddF(self.region, sizer_flags)
+        sizer.Add(self.region, sizer_flags)
         self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self.region)
 
     def create_advanced_form(self):
@@ -116,24 +115,24 @@ class SettingsScreen(wx.Panel):
                                       .Left())
 
         # switch interval
-        sizer.AddF(wx.StaticText(wrapper, label='Update interval (secs)'), sizer_flags)
+        sizer.Add(wx.StaticText(wrapper, label='Update interval (secs)'), sizer_flags)
         self.interval = wx.SpinCtrl(wrapper, size=(125, -1),
                                     min=10, max=300, initial=60)
-        sizer.AddF(self.interval, sizer_flags)
+        sizer.Add(self.interval, sizer_flags)
         self.Bind(wx.EVT_SPINCTRL, self.OnIntervalChange, self.interval)
 
         # switch threshold
-        sizer.AddF(wx.StaticText(wrapper, label='Profitability switch threshold (%)'),
-                   sizer_flags)
+        sizer.Add(wx.StaticText(wrapper, label='Profitability switch threshold (%)'),
+                  sizer_flags)
         self.threshold = wx.SpinCtrl(wrapper, size=(125, -1),
                                      min=1, max=50, initial=10)
-        sizer.AddF(self.threshold, sizer_flags)
+        sizer.Add(self.threshold, sizer_flags)
         self.Bind(wx.EVT_SPINCTRL, self.OnThresholdChange, self.threshold)
 
         # units
-        sizer.AddF(wx.StaticText(wrapper, label='Display units'), sizer_flags)
+        sizer.Add(wx.StaticText(wrapper, label='Display units'), sizer_flags)
         self.units = wx.Choice(wrapper, choices=UNITS)
-        sizer.AddF(self.units, sizer_flags)
+        sizer.Add(self.units, sizer_flags)
         self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self.units)
 
     def create_io_controls(self):
