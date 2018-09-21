@@ -50,9 +50,6 @@ class ExcavatorServer(object):
         # dict of algorithm name -> ESAlgorithm
         self.running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
                                    for algorithm in ALGORITHMS}
-        # dict of algorithm name -> ESBenchmark
-        self.running_benchmarks = {algorithm: ESBenchmark(self, algorithm)
-                                   for algorithm in ALGORITHMS}
         # dict of PCI bus id -> device id
         self.device_map = {}
         # dict of (algorithm name, Device instance) -> excavator worker id
@@ -85,38 +82,20 @@ class ExcavatorServer(object):
         # read device topology
         self._read_devices()
 
-    def restart(self):
-        # kill old process (if any)
-        if self.process is not None:
-            try:
-                self.process.terminate()
-            except (OSError, e):
-                if e.errno != os.errno.ESRCH:
-                    raise
-            self.process.wait()
-
-        # reset internal data structures
-        old_workers = self.running_workers
-        self.running_workers = {}
-        self.running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
-                                   for algorithm in ALGORITHMS}
-
-        # start excavator again
-        self.start()
-
         # add back previous workers
-        for key, worker_id in old_workers.items():
+        for key, worker_id in self.running_workers.items():
             algorithm, device = key
             self.start_work(algorithm, device)
+
+    def restart(self):
+        """Restarts excavator."""
+        self.stop()
+        self.start()
 
     def stop(self):
         """Stops excavator."""
         if self.process is None or self.process.poll() is not None:
             return
-
-        # stop all running workers
-        for (algorithm, device) in list(self.running_workers.keys()):
-            self.stop_work(algorithm, device)
 
         # disconnect from NiceHash
         self.send_command('unsubscribe', [])
@@ -177,11 +156,13 @@ class ExcavatorServer(object):
                       for device_data in response['devices']}
         self.device_map = bus_to_idx
 
-    def start_work(self, algorithm, device):
+    def start_work(self, algorithm, device, benchmarking=False):
         """Start running algorithm on device."""
         # create associated algorithm(s)
         for multialgorithm in algorithm.split('_'):
-            self.running_algorithms[multialgorithm].grab()
+            algorithm_instance = self.running_algorithms[multialgorithm]
+            algorithm_instance.set_benchmarking(benchmarking)
+            algorithm_instance.grab()
 
         # create worker
         device_id = self.device_map[device.pci_bus]
@@ -198,28 +179,6 @@ class ExcavatorServer(object):
         # destroy associated algorithm(s) if no longer used
         for multialgorithm in algorithm.split('_'):
             self.running_algorithms[multialgorithm].release()
-
-    def start_benchmark(self, algorithm, device):
-        """Start running algorithm benchmark on device."""
-        # create associated algorithm(s)
-        for multialgorithm in algorithm.split('_'):
-            self.running_benchmarks[multialgorithm].grab()
-
-        # create worker
-        device_id = self.device_map[device.pci_bus]
-        response = self.send_command('worker.add', [algorithm, device_id])
-        self.running_workers[(algorithm, device)] = response['worker_id']
-
-    def stop_benchmark(self, algorithm, device):
-        """Stop running algorithm benchmark on device."""
-        # destroy worker
-        worker_id = self.running_workers[(algorithm, device)]
-        self.send_command('worker.free', [str(worker_id)])
-        self.running_workers.pop((algorithm, device))
-
-        # destroy associated algorithm(s) if no longer used
-        for multialgorithm in algorithm.split('_'):
-            self.running_benchmarks[multialgorithm].release()
 
     def device_speeds(self, device):
         """Report the speeds of all algorithms running on device."""
@@ -256,26 +215,21 @@ class ESResource(object):
 class ESAlgorithm(ESResource):
     def __init__(self, server, algorithm):
         super(ESAlgorithm, self).__init__()
-        self.server = server
-        self.params = algorithm.split('_')
+        self._server = server
+        self._algorithm = algorithm
+        self._benchmark = False
+
+    def set_benchmarking(self, v):
+        self._benchmark = v
 
     def _create(self):
-        self.server.send_command('algorithm.add', self.params)
+        if self._benchmark:
+            self._server.send_command('algorithm.add', [self._algorithm, 'benchmark'])
+        else:
+            self._server.send_command('algorithm.add', [self._algorithm])
 
     def _destroy(self):
-        self.server.send_command('algorithm.remove', self.params)
-
-class ESBenchmark(ESResource):
-    def __init__(self, server, algorithm):
-        super(ESBenchmark, self).__init__()
-        self.server = server
-        self.params = algorithm.split('_')
-
-    def _create(self):
-        self.server.send_command('algorithm.add', self.params + ['benchmark'])
-
-    def _destroy(self):
-        self.server.send_command('algorithm.remove', self.params)
+        self._server.send_command('algorithm.remove', [self._algorithm])
 
 class ExcavatorAlgorithm(miner.Algorithm):
     def __init__(self, parent, excavator_algorithm, **kwargs):
@@ -284,35 +238,23 @@ class ExcavatorAlgorithm(miner.Algorithm):
                                                  name='excavator_%s' % excavator_algorithm,
                                                  algorithms=algorithms,
                                                  **kwargs)
-        self.excavator_algorithm = excavator_algorithm
-        self.running_devices = set()
-        self.benchmarking_devices = set()
+        self._excavator_algorithm = excavator_algorithm
+        self._devices = []
 
     @miner.needs_miner_running
     def set_devices(self, devices):
-        # clear running benchmarks
-        self._transition(self.benchmarking_devices, set(),
-                         detach=self._stop_benchmark)
-        self.benchmarking_devices = set()
-
-        new_devices = set(devices)
-        self._transition(self.running_devices, new_devices,
+        self._transition(set(self._devices), set(devices),
                          detach=self._stop_work,
                          attach=self._start_work)
-        self.running_devices = new_devices
+        self._devices = devices
 
-    @miner.needs_miner_running
-    def benchmark_devices(self, devices):
-        # clear running workers
-        self._transition(self.running_devices, set(),
-                         detach=self._stop_work)
-        self.running_devices = set()
-
-        new_devices = set(devices)
-        self._transition(self.benchmarking_devices, new_devices,
-                         detach=self._stop_benchmark,
-                         attach=self._start_benchmark)
-        self.benchmarking_devices = new_devices
+    def set_benchmarking(self, v):
+        self.benchmarking = v
+        devices = self._devices
+        if len(devices) > 0:
+            # NOTE: not exactly foolproof for multialgorithms, but good enough
+            self.set_devices([])
+            self.set_devices(devices)
 
     def _transition(self, old, new,
                     detach=lambda x: None, attach=lambda x: None):
@@ -324,42 +266,29 @@ class ExcavatorAlgorithm(miner.Algorithm):
 
     def _start_work(self, device):
         try:
-            self.parent.server.start_work(self.excavator_algorithm, device)
+            self.parent.server.start_work(self._excavator_algorithm, device,
+                                          benchmarking=self.benchmarking)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
 
     def _stop_work(self, device):
         try:
-            self.parent.server.stop_work(self.excavator_algorithm, device)
-        except (socket.error, socket.timeout):
-            raise miner.MinerNotRunning('could not connect to excavator')
-
-    def _start_benchmark(self, device):
-        try:
-            self.parent.server.start_benchmark(self.excavator_algorithm, device)
-        except (socket.error, socket.timeout):
-            raise miner.MinerNotRunning('could not connect to excavator')
-
-    def _stop_benchmark(self, device):
-        try:
-            self.parent.server.stop_benchmark(self.excavator_algorithm, device)
+            self.parent.server.stop_work(self._excavator_algorithm, device)
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
 
     @miner.needs_miner_running
     def current_speeds(self):
-        devices = self.running_devices.copy()
-        devices.update(self.benchmarking_devices)
         try:
             workers = [self.parent.server.device_speeds(device)
-                       for device in devices]
+                       for device in self._devices]
         except (socket.error, socket.timeout):
             raise miner.MinerNotRunning('could not connect to excavator')
         else:
             def total_speed(algorithm): return sum([w[algorithm]
                                                    for w in workers if algorithm in w])
             return [total_speed(algorithm)
-                    for algorithm in self.excavator_algorithm.split('_')]
+                    for algorithm in self._excavator_algorithm.split('_')]
 
 class Excavator(miner.Miner):
     def __init__(self, config_dir, settings):

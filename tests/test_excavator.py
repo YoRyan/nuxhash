@@ -99,14 +99,15 @@ class TestExcavator(unittest.TestCase):
     def test_benchmark_mode(self):
         self.equihash.set_devices([self.device])
         sleep(1)
-        self.equihash.benchmark_devices([self.device])
+        self.equihash.set_benchmarking(True)
         self.assertEqual(self._get_workers(), [{ 'device_uuid': self.device.uuid,
                                                  'algorithms': ['equihash'] }])
 
     def test_benchmark_stop(self):
-        self.equihash.benchmark_devices([self.device])
+        self.equihash.set_benchmarking(True)
+        self.equihash.set_devices([self.device])
         sleep(1)
-        self.equihash.benchmark_devices([])
+        self.equihash.set_devices([])
         self.assertEqual(self._get_workers(), [])
 
 if __name__ == '__main__':

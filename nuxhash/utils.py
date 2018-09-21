@@ -44,7 +44,8 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
     """
     SAMPLE_INTERVAL = 1
 
-    algorithm.benchmark_devices([device])
+    algorithm.set_benchmarking(True)
+    algorithm.set_devices([device])
     # warmup period
     for i in range(warmup_duration//SAMPLE_INTERVAL):
         if not algorithm.parent.is_running():
@@ -61,7 +62,8 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
         samples.append(sample)
         sample_callback(sample, sample_duration - i*SAMPLE_INTERVAL)
         sleep(SAMPLE_INTERVAL)
-    algorithm.benchmark_devices([])
+    algorithm.set_devices([])
+    algorithm.set_benchmarking(False)
 
     # return average of all samples
     def sum_list_elements(lists):

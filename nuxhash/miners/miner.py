@@ -49,19 +49,19 @@ class Algorithm(object):
         self.algorithms = algorithms
         # warmup time for benchmarking purposes (either short or long)
         self.warmup_secs = warmup_secs
+        # benchmarking mode
+        self.benchmarking = False
 
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)
-
-    # set_devices and benchmark_devices should be mutually-exclusive operations
 
     def set_devices(self, devices):
         """Run this algorithm on the set of devices."""
         pass
 
-    def benchmark_devices(self, devices):
-        """Run this algorithm on the set of devices in benchmark mode."""
-        pass
+    def set_benchmarking(self, v):
+        """Engage/disengage benchmarking mode."""
+        self.benchmarking = v
 
     def current_speeds(self):
         pass
