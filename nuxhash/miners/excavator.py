@@ -67,6 +67,7 @@ class ExcavatorServer(object):
                                         stderr=subprocess.STDOUT,
                                         stdout=subprocess.PIPE,
                                         preexec_fn=os.setpgrp) # don't forward signals
+        self.process.stdin.close()
         # send stdout to logger
         log_thread = threading.Thread(target=miner.log_output, args=(self.process,))
         log_thread.start()
@@ -121,9 +122,9 @@ class ExcavatorServer(object):
         self.send_command('unsubscribe', [])
 
         # send the quit command, but don't read a response
-        s = socket.create_connection(self.address, self.TIMEOUT)
-        js = json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n'
-        s.sendall(bytearray(js, 'ascii'))
+        js_data = json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n'
+        with socket.create_connection(self.address, self.TIMEOUT) as s:
+            s.sendall(js_data.encode('ascii'))
 
         # wait for the process to exit
         self.process.wait()
@@ -142,18 +143,18 @@ class ExcavatorServer(object):
             'method': method,
             'params': [str(param) for param in params]
             }
-        s = socket.create_connection(self.address, self.TIMEOUT)
-        s.sendall((json.dumps(command).replace('\n', '\\n') + '\n').encode())
+        js_data = json.dumps(command).replace('\n', '\\n') + '\n'
         response = ''
-        while True:
-            chunk = s.recv(self.BUFFER_SIZE).decode()
-            # excavator responses are newline-terminated too
-            if '\n' in chunk:
-                response += chunk[:chunk.index('\n')]
-                break
-            else:
-                response += chunk
-        s.close()
+        with socket.create_connection(self.address, self.TIMEOUT) as s:
+            s.sendall(js_data.encode('ascii'))
+            while True:
+                chunk = s.recv(self.BUFFER_SIZE).decode()
+                # excavator responses are newline-terminated too
+                if '\n' in chunk:
+                    response += chunk[:chunk.index('\n')]
+                    break
+                else:
+                    response += chunk
 
         # read response
         response_data = json.loads(response)
@@ -370,9 +371,9 @@ class Excavator(miner.Miner):
                                           warmup_secs=miner.SHORT_WARMUP_SECS)
             self.algorithms.append(runnable)
 
+        executable = config_dir/'excavator'/'excavator'
         auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
                             self.settings['nicehash']['workername'])
-        executable = str(config_dir/'excavator'/'excavator')
         self.server = ExcavatorServer(executable,
                                       self.settings['excavator']['port'],
                                       self.settings['nicehash']['region'],

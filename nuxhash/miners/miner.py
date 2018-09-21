@@ -80,4 +80,5 @@ def log_output(process):
         line = str(process.stdout.readline()).rstrip()
         if line != '':
             logging.debug(line + '\033[0m') # reset terminal colors
+    process.stdout.close()
 
