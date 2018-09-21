@@ -1,7 +1,7 @@
 import logging
 from functools import wraps
 
-SHORT_WARMUP_SECS = 60
+SHORT_WARMUP_SECS = 30
 LONG_WARMUP_SECS = 300
 
 class MinerException(Exception):
