@@ -21,6 +21,7 @@ I have no plans to implement direct overclocking or fan control.
 
 External dependencies, Ubuntu 18.04 LTS:
 
+* Python 3.6
 * Nvidia's proprietary graphics driver for Linux, version 387.xx or later
 * curl (to download excavator)
 * ocl-icd-libopencl1 [(to run CUDA apps)](https://askubuntu.com/questions/1032430/opencl-with-nvidia-390-on-ubunut-18-04)
@@ -28,7 +29,7 @@ External dependencies, Ubuntu 18.04 LTS:
 Install Python package.
 
 ```
-python2 setup.py install
+python3 setup.py install
 ```
 
 Perform initial setup, run benchmarks (approx. 5 minutes/algorithm/card).
@@ -106,12 +107,12 @@ $ nuxhashd --show-mining
 
 External dependencies, Ubuntu 18.04 LTS:
 
-* python-wxgtk3.0
+* python3-wxgtk4.0
 
 Install Python package.
 
 ```
-python2 setup.py install
+python3 setup.py install
 ```
 
 Try it out.
