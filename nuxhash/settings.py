@@ -1,8 +1,8 @@
-import ConfigParser
+import configparser
 import json
 import os
-from pathlib2 import Path
 from collections import defaultdict
+from pathlib import Path
 
 DEFAULT_CONFIGDIR = Path(os.path.expanduser('~/.config/nuxhash'))
 SETTINGS_FILENAME = 'settings.conf'
@@ -29,13 +29,13 @@ DEFAULT_SETTINGS = {
 
 def read_settings_from_file(fd):
     settings = {}
-    parser = ConfigParser.SafeConfigParser()
-    parser.readfp(fd)
+    parser = configparser.ConfigParser()
+    parser.read_file(fd)
 
     def get_option(parser_method, section, option):
         try:
             return parser_method(section, option)
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        except (configparser.NoSectionError, configparser.NoOptionError):
             return DEFAULT_SETTINGS[section][option]
 
     nicehash = {}
@@ -61,7 +61,7 @@ def read_settings_from_file(fd):
     return settings
 
 def write_settings_to_file(fd, settings):
-    parser = ConfigParser.SafeConfigParser()
+    parser = configparser.ConfigParser()
 
     for section in settings:
         parser.add_section(section)
@@ -73,7 +73,7 @@ def write_settings_to_file(fd, settings):
 
 def read_benchmarks_from_file(fd, devices):
     benchmarks = defaultdict(lambda: {})
-    js = json.load(fd, 'ascii')
+    js = json.load(fd)
 
     for js_device in js:
         device = next((d for d in devices if str(d) == js_device), None)
@@ -104,7 +104,7 @@ def write_benchmarks_to_file(fd, benchmarks):
 
 def load_persistent_data(config_dir, devices):
     try:
-        with open(str(config_dir/SETTINGS_FILENAME), 'r') as settings_fd:
+        with open(config_dir/SETTINGS_FILENAME, 'r') as settings_fd:
             settings = read_settings_from_file(settings_fd)
     except IOError as err:
         if err.errno != os.errno.ENOENT:
@@ -113,7 +113,7 @@ def load_persistent_data(config_dir, devices):
 
     benchmarks = defaultdict(lambda: {})
     try:
-        with open(str(config_dir/BENCHMARKS_FILENAME), 'r') as benchmarks_fd:
+        with open(config_dir/BENCHMARKS_FILENAME, 'r') as benchmarks_fd:
             benchmarks = read_benchmarks_from_file(benchmarks_fd, devices)
     except IOError as err:
         if err.errno != os.errno.ENOENT:
@@ -123,14 +123,14 @@ def load_persistent_data(config_dir, devices):
 
 def save_persistent_data(config_dir, settings, benchmarks):
     try:
-        os.makedirs(str(config_dir))
+        os.makedirs(config_dir)
     except OSError:
-        if not os.path.isdir(str(config_dir)):
+        if not os.path.isdir(config_dir):
             raise
 
-    with open(str(config_dir/SETTINGS_FILENAME), 'w') as settings_fd:
+    with open(config_dir/SETTINGS_FILENAME, 'w') as settings_fd:
         write_settings_to_file(settings_fd, settings)
 
-    with open(str(config_dir/BENCHMARKS_FILENAME), 'w') as benchmarks_fd:
+    with open(config_dir/BENCHMARKS_FILENAME, 'w') as benchmarks_fd:
         write_benchmarks_to_file(benchmarks_fd, benchmarks)
 

@@ -1,6 +1,6 @@
 import json
-import urllib
-import urllib2
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 TIMEOUT = 20
 
@@ -8,10 +8,9 @@ def api_call(method, params):
     get_data = { 'method': method }
     get_data.update(params)
 
-    request = urllib2.urlopen('https://api.nicehash.com/api?%s' %
-                              urllib.urlencode(get_data), timeout=TIMEOUT)
-
-    return json.load(request, 'ascii')
+    request = urlopen('https://api.nicehash.com/api?%s' %
+                      urlencode(get_data), timeout=TIMEOUT)
+    return json.load(request)
 
 def unpaid_balance(address):
     response = api_call('stats.provider', { 'addr': address })

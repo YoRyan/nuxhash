@@ -1,7 +1,7 @@
 def nuxhashd():
-    from daemon import main
+    from nuxhash.daemon import main
     main()
 
 def nuxhash_gui():
-    from gui import main
+    from nuxhash.gui import main
     main()

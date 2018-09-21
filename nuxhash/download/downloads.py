@@ -1,6 +1,6 @@
 import os
 import subprocess
-from pathlib2 import Path
+from pathlib import Path
 from shutil import rmtree
 
 downloads_path = Path(os.path.dirname(__file__))/'downloadables'
@@ -11,7 +11,7 @@ class Downloadable(object):
         self.script = downloads_path/script_name
         self.name = name
     def run_script(self, *args):
-        return subprocess.call([str(self.script)] + list(args), cwd=str(self.dir))
+        return subprocess.call([self.script] + list(args), cwd=self.dir)
     def verify(self):
         if self.dir.is_dir():
             return self.run_script('verify') == 0
@@ -19,12 +19,12 @@ class Downloadable(object):
             return False
     def download(self):
         if not self.dir.is_dir():
-            os.makedirs(str(self.dir))
+            os.makedirs(self.dir)
         for child in self.dir.iterdir():
             if child.is_dir():
-                rmtree(str(child))
+                rmtree(child)
             else:
-                os.remove(str(child))
+                os.remove(child)
         self.run_script('download')
 
 def make_miners(config_dir):

@@ -1,6 +1,6 @@
-from miners.miner import MinerNotRunning
-
 from time import sleep
+
+from nuxhash.miners.miner import MinerNotRunning
 
 def format_speed(s):
     """Turn a high hashes/second value into a human-readable string."""

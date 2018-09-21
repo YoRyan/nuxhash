@@ -1,7 +1,7 @@
-from switcher import ProfitSwitcher
-
-from collections import defaultdict
 import logging
+from collections import defaultdict
+
+from nuxhash.switching.switcher import ProfitSwitcher
 
 class NaiveSwitcher(ProfitSwitcher):
     def __init__(self, settings, **kwargs):
@@ -11,9 +11,8 @@ class NaiveSwitcher(ProfitSwitcher):
 
     def decide(self, mbtc_per_day_per_device, timestamp):
         decision = {}
-        for device, revenues in mbtc_per_day_per_device.iteritems():
-            switch_algo, switch_revenue = max(revenues.iteritems(),
-                                              key=lambda (algo, revenue): revenue)
+        for device, revenues in mbtc_per_day_per_device.items():
+            switch_algo, switch_revenue = max(revenues.items(), key=lambda p: p[1])
             stay_algo = self.last_decision[device]
 
             if stay_algo is None:

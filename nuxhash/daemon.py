@@ -1,19 +1,3 @@
-from miners.miner import MinerNotRunning
-import devices.nvidia
-import download.downloads
-import miners.excavator
-import nicehash
-import settings
-import switching.naive
-import utils
-
-from collections import defaultdict
-from datetime import datetime
-from pathlib2 import Path
-from ssl import SSLError
-from threading import Event
-from time import sleep
-from urllib2 import HTTPError, URLError
 import argparse
 import logging
 import os
@@ -21,6 +5,22 @@ import readline
 import signal
 import socket
 import sys
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from ssl import SSLError
+from threading import Event
+from time import sleep
+from urllib.error import HTTPError, URLError
+
+from nuxhash import settings, utils
+from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
+from nuxhash.devices.nvidia import NvidiaDevice
+from nuxhash.download.downloads import make_miners
+from nuxhash.miners.excavator import Excavator
+from nuxhash.miners.miner import MinerNotRunning
+from nuxhash.nicehash import simplemultialgo_info
+from nuxhash.switching.naive import NaiveSwitcher
 
 BENCHMARK_SECS = 90
 
@@ -55,8 +55,7 @@ def main():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log_level)
 
     # probe graphics cards
-    nvidia_devices = devices.nvidia.enumerate_devices()
-    all_devices = nvidia_devices
+    all_devices = nvidia_devices()
 
     # load from config directory
     nx_settings, nx_benchmarks = settings.load_persistent_data(config_dir, all_devices)
@@ -69,12 +68,12 @@ def main():
         nx_settings['nicehash']['region'] = region
 
     # download and initialize miners
-    downloadables = download.downloads.make_miners(config_dir)
+    downloadables = make_miners(config_dir)
     for d in downloadables:
         if not d.verify():
             logging.info('Downloading %s' % d.name)
             d.download()
-    nx_miners = [miners.excavator.Excavator(config_dir, nx_settings)]
+    nx_miners = [Excavator(config_dir, nx_settings)]
 
     if args.benchmark_all:
         nx_benchmarks = run_missing_benchmarks(nx_miners, nx_settings, all_devices,
@@ -91,18 +90,18 @@ def main():
     settings.save_persistent_data(config_dir, nx_settings, nx_benchmarks)
 
 def initial_setup():
-    print 'nuxhashd initial setup'
+    print('nuxhashd initial setup')
 
-    wallet = raw_input('Wallet address: ')
-    workername = raw_input('Worker name: ')
-    region = raw_input('Region (eu/usa/hk/jp/in/br): ')
+    wallet = input('Wallet address: ')
+    workername = input('Worker name: ')
+    region = input('Region (eu/usa/hk/jp/in/br): ')
 
-    print
+    print()
 
     return wallet, workername, region
 
 def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
-    stratums = nicehash.simplemultialgo_info(settings)[1]
+    stratums = simplemultialgo_info(settings)[1]
 
     algorithms = sum([miner.algorithms for miner in miners], [])
     def algorithm(name): return next((a for a in algorithms if a.name == name), None)
@@ -111,7 +110,7 @@ def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
         miner.load()
 
     done = sum([[(device, algorithm(algorithm_name)) for algorithm_name in benchmarks.keys()]
-                for device, benchmarks in old_benchmarks.iteritems()], [])
+                for device, benchmarks in old_benchmarks.items()], [])
     all_targets = sum([[(device, algorithm) for algorithm in algorithms]
                        for device in devices], [])
     benchmarks = run_benchmarks(set(all_targets) - set(done))
@@ -125,23 +124,23 @@ def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
 
 def run_benchmarks(targets):
     if len(targets) == 0:
-        print 'Nothing to benchmark.'
+        print('Nothing to benchmark.')
         return []
 
     benchmarks = defaultdict(lambda: {})
     last_device = None
     for device, algorithm in sorted(targets, key=lambda t: str(t[0])):
         if device != last_device:
-            if isinstance(device, devices.nvidia.NvidiaDevice):
-                print '\nCUDA device: %s (%s)' % (device.name, device.uuid)
+            if isinstance(device, NvidiaDevice):
+                print('\nCUDA device: %s (%s)' % (device.name, device.uuid))
             last_device = device
         try:
             benchmarks[device][algorithm.name] = run_benchmark(device, algorithm)
         except MinerNotRunning:
-            print '  %s: failed to complete benchmark     ' % algorithm.name
+            print('  %s: failed to complete benchmark     ' % algorithm.name)
             benchmarks[device][algorithm.name] = [0]*len(algorithm.algorithms)
         except KeyboardInterrupt:
-            print 'Benchmarking aborted (completed benchmarks saved).'
+            print('Benchmarking aborted (completed benchmarks saved).')
             break
     return benchmarks
 
@@ -151,25 +150,25 @@ def run_benchmark(device, algorithm):
         status_dot[0] = (status_dot[0] + 1) % 3
         status_line = ''.join(['.' if i == status_dot[0] else ' ' for i in range(3)])
         if secs_remaining < 0:
-            print ('  %s %s %s (warming up, %s)\r' %
-                   (algorithm.name, status_line, utils.format_speeds(sample),
-                    utils.format_time(-secs_remaining))),
+            print('  %s %s %s (warming up, %s)\r' %
+                  (algorithm.name, status_line, utils.format_speeds(sample),
+                   format_time(-secs_remaining)), end='')
         else:
-            print ('  %s %s %s (sampling, %s)  \r' %
-                   (algorithm.name, status_line, utils.format_speeds(sample),
-                    utils.format_time(secs_remaining))),
+            print('  %s %s %s (sampling, %s)  \r' %
+                  (algorithm.name, status_line, utils.format_speeds(sample),
+                   utils.format_time(secs_remaining)), end='')
         sys.stdout.flush()
     speeds = utils.run_benchmark(algorithm, device,
                                  algorithm.warmup_secs, BENCHMARK_SECS,
                                  sample_callback=report_speeds)
-    print '  %s: %s                      ' % (algorithm.name,
-                                              utils.format_speeds(speeds))
+    print('  %s: %s                      ' % (algorithm.name,
+                                              utils.format_speeds(speeds)))
     return speeds
 
 def list_devices(nx_devices):
     for d in sorted(nx_devices, key=str):
-        if isinstance(d, devices.nvidia.NvidiaDevice):
-            print 'CUDA device: %s (%s)' % (d.name, d.uuid)
+        if isinstance(d, NvidiaDevice):
+            print('CUDA device: %s (%s)' % (d.name, d.uuid))
 
 def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     # get algorithm -> port information for stratum URLs
@@ -177,7 +176,7 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     mbtc_per_hash = download_time = stratums = None
     while mbtc_per_hash is None:
         try:
-            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
+            mbtc_per_hash, stratums = simplemultialgo_info(nx_settings)
         except (HTTPError, URLError, socket.error, socket.timeout):
             pass
         else:
@@ -189,7 +188,7 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     algorithms = sum([miner.algorithms for miner in nx_miners], [])
 
     # initialize profit-switching
-    profit_switch = switching.naive.NaiveSwitcher(nx_settings)
+    profit_switch = NaiveSwitcher(nx_settings)
     profit_switch.reset()
 
     # quit signal
@@ -231,7 +230,7 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
 
         # query nicehash profitability data again
         try:
-            mbtc_per_hash = nicehash.simplemultialgo_info(nx_settings)[0]
+            mbtc_per_hash = simplemultialgo_info(nx_settings)[0]
         except URLError as err:
             logging.warning('Failed to retrieve NiceHash profitability stats: %s' %
                             err.reason)

@@ -1,11 +1,11 @@
-import miner
-
 import json
 import os
 import socket
 import subprocess
 import threading
 from time import sleep
+
+from nuxhash.miners import miner
 
 ALGORITHMS = [
     'equihash',
@@ -89,7 +89,7 @@ class ExcavatorServer(object):
         if self.process is not None:
             try:
                 self.process.terminate()
-            except OSError, e:
+            except (OSError, e):
                 if e.errno != os.errno.ESRCH:
                     raise
             self.process.wait()
@@ -104,7 +104,7 @@ class ExcavatorServer(object):
         self.start()
 
         # add back previous workers
-        for key, worker_id in old_workers.iteritems():
+        for key, worker_id in old_workers.items():
             algorithm, device = key
             self.start_work(algorithm, device)
 
@@ -114,7 +114,7 @@ class ExcavatorServer(object):
             return
 
         # stop all running workers
-        for (algorithm, device) in self.running_workers.keys():
+        for (algorithm, device) in list(self.running_workers.keys()):
             self.stop_work(algorithm, device)
 
         # disconnect from NiceHash
@@ -122,7 +122,8 @@ class ExcavatorServer(object):
 
         # send the quit command, but don't read a response
         s = socket.create_connection(self.address, self.TIMEOUT)
-        s.sendall(json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n')
+        js = json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n'
+        s.sendall(bytearray(js, 'ascii'))
 
         # wait for the process to exit
         self.process.wait()
