@@ -46,7 +46,7 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
 
     algorithm.benchmark_devices([device])
     # warmup period
-    for i in range(warmup_duration/SAMPLE_INTERVAL):
+    for i in range(warmup_duration//SAMPLE_INTERVAL):
         if not algorithm.parent.is_running():
             raise MinerNotRunning
         sample = algorithm.current_speeds()
@@ -54,7 +54,7 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
         sleep(SAMPLE_INTERVAL)
     # actual sampling
     samples = []
-    for i in range(sample_duration/SAMPLE_INTERVAL):
+    for i in range(sample_duration//SAMPLE_INTERVAL):
         if not algorithm.parent.is_running():
             raise MinerNotRunning
         sample = algorithm.current_speeds()

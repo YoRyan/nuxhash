@@ -103,6 +103,12 @@ class TestExcavator(unittest.TestCase):
         self.assertEqual(self._get_workers(), [{ 'device_uuid': self.device.uuid,
                                                  'algorithms': ['equihash'] }])
 
+    def test_benchmark_stop(self):
+        self.equihash.benchmark_devices([self.device])
+        sleep(1)
+        self.equihash.benchmark_devices([])
+        self.assertEqual(self._get_workers(), [])
+
 if __name__ == '__main__':
     unittest.main()
 

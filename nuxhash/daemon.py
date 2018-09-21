@@ -44,9 +44,7 @@ def main():
     config_dir = Path(args.configdir[0])
 
     # initiate logging
-    if args.benchmark_all:
-        log_level = logging.ERROR
-    elif args.show_mining:
+    if args.show_mining:
         log_level = logging.DEBUG
     elif args.verbose:
         log_level = logging.INFO
@@ -84,6 +82,8 @@ def main():
     elif args.list_devices:
         list_devices(all_devices)
     else:
+        nx_benchmarks = run_missing_benchmarks(nx_miners, nx_settings, all_devices,
+                                               defaultdict(lambda: {}))
         do_mining(nx_miners, nx_settings, nx_benchmarks, all_devices)
 
     # save to config directory
@@ -103,6 +103,10 @@ def initial_setup():
 def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
     stratums = simplemultialgo_info(settings)[1]
 
+    logger = logging.getLogger()
+    log_level = logger.getEffectiveLevel()
+    logger.setLevel(logging.ERROR)
+
     algorithms = sum([miner.algorithms for miner in miners], [])
     def algorithm(name): return next((a for a in algorithms if a.name == name), None)
     for miner in miners:
@@ -117,6 +121,8 @@ def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
 
     for miner in miners:
         miner.unload()
+
+    logger.setLevel(log_level)
 
     for d in benchmarks:
         old_benchmarks[d].update(benchmarks[d])
@@ -152,7 +158,7 @@ def run_benchmark(device, algorithm):
         if secs_remaining < 0:
             print('  %s %s %s (warming up, %s)\r' %
                   (algorithm.name, status_line, utils.format_speeds(sample),
-                   format_time(-secs_remaining)), end='')
+                   utils.format_time(-secs_remaining)), end='')
         else:
             print('  %s %s %s (sampling, %s)  \r' %
                   (algorithm.name, status_line, utils.format_speeds(sample),

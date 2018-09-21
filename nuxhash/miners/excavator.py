@@ -365,7 +365,6 @@ class Excavator(miner.Miner):
     def __init__(self, config_dir, settings):
         super(Excavator, self).__init__(config_dir, settings)
 
-        self.server = None
         for algorithm in ALGORITHMS:
             runnable = ExcavatorAlgorithm(self, algorithm,
                                           warmup_secs=miner.SHORT_WARMUP_SECS)
@@ -384,7 +383,6 @@ class Excavator(miner.Miner):
 
     def unload(self):
         self.server.stop()
-        self.server = None
 
     def reload(self):
         self.server.restart()

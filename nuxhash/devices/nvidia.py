@@ -7,9 +7,12 @@ class NvidiaDevice(object):
         self.uuid = uuid
         self.name = name
     def __eq__(self, other):
-        return self.uuid == other.uuid
+        if isinstance(other, NvidiaDevice):
+            return self.uuid == other.uuid
+        else:
+            return False
     def __ne__(self, other):
-        return self.uuid != other.uuid
+        return not self == other
     def __str__(self):
         return 'nvidia_%s' % (self.uuid)
     def __repr__(self):
