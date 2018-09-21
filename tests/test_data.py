@@ -1,10 +1,10 @@
-import nuxhash.settings
-import tests
-
-from pathlib2 import Path
+from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 from unittest import main, TestCase
+
+import nuxhash.settings
+import tests
 
 class TestUserData(TestCase):
     def setUp(self):

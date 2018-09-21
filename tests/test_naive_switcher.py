@@ -1,10 +1,10 @@
-from nuxhash.miners.excavator import Excavator
-from nuxhash.switching.naive import NaiveSwitcher
+from pathlib import Path
+from unittest import main, TestCase
+
 import nuxhash.settings
 import tests
-
-from pathlib2 import Path
-from unittest import main, TestCase
+from nuxhash.miners.excavator import Excavator
+from nuxhash.switching.naive import NaiveSwitcher
 
 class TestNaiveSwitcher(TestCase):
     def setUp(self):

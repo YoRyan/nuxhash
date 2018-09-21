@@ -1,10 +1,10 @@
+import unittest
+from time import sleep
+
+import nuxhash.settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.download.downloads import make_miners
 from nuxhash.miners.excavator import Excavator
-import nuxhash.settings
-
-from time import sleep
-import unittest
 
 devices = nvidia_devices()
 
