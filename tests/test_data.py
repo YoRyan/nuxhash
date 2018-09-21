@@ -13,10 +13,10 @@ class TestUserData(TestCase):
         self.devices = tests.get_test_devices()
         self.benchmarks = tests.get_test_benchmarks()
     def tearDown(self):
-        rmtree(str(self.testdir))
+        rmtree(self.testdir)
 
     def test_settings(self):
-        testfile = str(self.testdir/'settings.conf')
+        testfile = self.testdir/'settings.conf'
         with open(testfile, 'w') as fd:
             nuxhash.settings.write_settings_to_file(fd, self.settings)
         with open(testfile, 'r') as fd:
@@ -24,7 +24,7 @@ class TestUserData(TestCase):
         self.assertEqual(self.settings, read_settings)
 
     def test_benchmarks(self):
-        testfile = str(self.testdir/'benchmarks.json')
+        testfile = self.testdir/'benchmarks.json'
         with open(testfile, 'w') as fd:
             nuxhash.settings.write_benchmarks_to_file(fd, self.benchmarks)
         with open(testfile, 'r') as fd:
