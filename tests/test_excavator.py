@@ -96,6 +96,13 @@ class TestExcavator(unittest.TestCase):
         self.equihash.set_devices([])
         self.assertEqual(self._get_algorithms(), ['neoscrypt'])
 
+    def test_benchmark_mode(self):
+        self.equihash.set_devices([self.device])
+        sleep(1)
+        self.equihash.benchmark_devices([self.device])
+        self.assertEqual(self._get_workers(), [{ 'device_uuid': self.device.uuid,
+                                                 'algorithms': ['equihash'] }])
+
 if __name__ == '__main__':
     unittest.main()
 
