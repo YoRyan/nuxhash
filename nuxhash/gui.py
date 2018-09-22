@@ -1,9 +1,13 @@
-import wx
 from copy import deepcopy
 from functools import wraps
+from time import sleep
 
-from nuxhash import settings
+import wx
+from wx.lib.newevent import NewEvent
+
+from nuxhash import settings, utils
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
+from nuxhash.nicehash import unpaid_balance, simplemultialgo_info
 
 
 FIELD_BORDER = 10
@@ -16,35 +20,86 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, *args, **kwargs):
         wx.Frame.__init__(self, parent, *args, **kwargs)
         self.SetSizeHints(minW=500, minH=500)
-        self.devices = []
-        self.settings = None
-        self.benchmarks = None
+        self._devices = []
+        self._settings = None
+        self._benchmarks = None
         notebook = wx.Notebook(self)
 
+        self._mining_screen = MiningScreen(notebook)
+        notebook.AddPage(self._mining_screen, text='Mining')
+
         def settings_callback(new_settings):
-            self.settings = new_settings
-            self.save_persistent_data()
-        self.settings_screen = SettingsScreen(notebook, commit_callback=settings_callback)
-        notebook.AddPage(self.settings_screen, text='Settings')
+            self.read_settings(new_settings)
+            self._save_persist()
+        self._settings_screen = SettingsScreen(notebook,
+                                               commit_callback=settings_callback)
+        notebook.AddPage(self._settings_screen, text='Settings')
 
-        self.probe_devices()
-        self.load_persistent_data()
+        self._probe_devices()
+        self._load_persist()
 
-    def probe_devices(self):
-        self.devices = nvidia_devices()
+    def read_settings(self, new_settings):
+        self._settings = new_settings
+        for s in [self._settings_screen,
+                  self._mining_screen]:
+            s.read_settings(new_settings)
 
-    def load_persistent_data(self):
+    def _probe_devices(self):
+        self._devices = nvidia_devices()
+
+    def _load_persist(self):
         nx_settings, nx_benchmarks = settings.load_persistent_data(
             settings.DEFAULT_CONFIGDIR,
-            self.devices
+            self._devices
             )
-        self.settings = nx_settings
-        self.benchmarks = nx_benchmarks
-        self.settings_screen.read_settings(nx_settings)
+        self.read_settings(nx_settings)
+        self._benchmarks = nx_benchmarks
 
-    def save_persistent_data(self):
+    def _save_persist(self):
         settings.save_persistent_data(settings.DEFAULT_CONFIGDIR,
-                                      self.settings, self.benchmarks)
+                                      self._settings, self._benchmarks)
+
+
+class MiningScreen(wx.Panel):
+
+    def __init__(self, parent, *args, **kwargs):
+        wx.Panel.__init__(self, parent, *args, **kwargs)
+        self._settings = None
+        sizer = wx.BoxSizer(orient=wx.VERTICAL)
+        sizer_flags = wx.SizerFlags().Border(wx.ALL, FIELD_BORDER)
+        self.SetSizer(sizer)
+
+        sizer.AddStretchSpacer()
+
+        # Add balance displays.
+        balances = wx.FlexGridSizer(2, 2, FIELD_BORDER, FIELD_BORDER)
+        balances.AddGrowableCol(1)
+        sizer.Add(balances, sizer_flags.Expand())
+
+        balances.Add(wx.StaticText(self, label='Daily revenue'))
+        self._revenue = wx.StaticText(self)
+        self._revenue.SetFont(self.GetFont().Bold())
+        balances.Add(self._revenue,
+                     wx.SizerFlags().Right())
+
+        balances.Add(wx.StaticText(self, label='Address balance'))
+        self._balance = wx.StaticText(self)
+        self._balance.SetFont(self.GetFont().Bold())
+        balances.Add(self._balance,
+                     wx.SizerFlags().Right())
+
+    def read_settings(self, new_settings):
+        self._settings = new_settings
+        # TODO
+        self.set_balance(unpaid_balance(self._settings['nicehash']['wallet']))
+
+    def set_revenue(self, v):
+        unit = self._settings['gui']['units']
+        self._revenue.SetLabel(utils.format_balance(v, unit))
+
+    def set_balance(self, v):
+        unit = self._settings['gui']['units']
+        self._balance.SetLabel(utils.format_balance(v, unit))
 
 
 class SettingsScreen(wx.Panel):
@@ -52,8 +107,8 @@ class SettingsScreen(wx.Panel):
     def __init__(self, parent, commit_callback=lambda settings: None,
                  *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self.settings = self.new_settings = None
-        self.commit_callback = commit_callback
+        self._settings = self.new_settings = None
+        self._commit_callback = commit_callback
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
@@ -159,40 +214,40 @@ class SettingsScreen(wx.Panel):
 
     @change_event
     def OnWalletChange(self, event):
-        self.new_settings['nicehash']['wallet'] = event.GetString()
+        self._new_settings['nicehash']['wallet'] = event.GetString()
 
     @change_event
     def OnWorkerChange(self, event):
-        self.new_settings['nicehash']['workername'] = event.GetString()
+        self._new_settings['nicehash']['workername'] = event.GetString()
 
     @change_event
     def OnRegionChange(self, event):
-        self.new_settings['nicehash']['region'] = REGIONS[event.GetSelection()]
+        self._new_settings['nicehash']['region'] = REGIONS[event.GetSelection()]
 
     @change_event
     def OnIntervalChange(self, event):
-        self.new_settings['switching']['interval'] = event.GetPosition()
+        self._new_settings['switching']['interval'] = event.GetPosition()
 
     @change_event
     def OnThresholdChange(self, event):
-        self.new_settings['switching']['threshold'] = event.GetPosition()/100.0
+        self._new_settings['switching']['threshold'] = event.GetPosition()/100.0
 
     @change_event
     def OnUnitsChange(self, event):
-        self.new_settings['gui']['units'] = UNITS[event.GetSelection()]
+        self._new_settings['gui']['units'] = UNITS[event.GetSelection()]
 
     def OnRevert(self, event):
-        self.read_settings(self.settings)
+        self.read_settings(self._settings)
 
     def OnSave(self, event):
-        self.settings = deepcopy(self.new_settings)
+        self._settings = deepcopy(self._new_settings)
         self.revert.Disable()
         self.save.Disable()
-        self.commit_callback(self.new_settings)
+        self._commit_callback(self._new_settings)
 
     def read_settings(self, nx_settings):
-        self.settings = nx_settings
-        self.new_settings = deepcopy(nx_settings)
+        self._settings = nx_settings
+        self._new_settings = deepcopy(nx_settings)
         self.revert.Disable()
         self.save.Disable()
         self.wallet.ChangeValue(nx_settings['nicehash']['wallet'])

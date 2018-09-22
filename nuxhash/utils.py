@@ -34,6 +34,13 @@ def format_time(seconds):
     else:
         return '%1d:%02d' % (m, s)
 
+def format_balance(v, unit):
+    """Turn a Bitcoin balance into a string with requested unit."""
+    if unit == 'BTC':
+        return '%.8f BTC' % v
+    elif unit == 'mBTC':
+        return '%.5f mBTC' % (v*1e3)
+
 def run_benchmark(algorithm, device, warmup_duration, sample_duration,
                   sample_callback=lambda sample, secs_remaining: None):
     """Run algorithm on device for duration seconds and report the average speed.
