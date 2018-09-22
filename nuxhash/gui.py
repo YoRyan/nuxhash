@@ -77,16 +77,16 @@ class MiningScreen(wx.Panel):
         sizer.Add(balances, sizer_flags.Expand())
 
         balances.Add(wx.StaticText(self, label='Daily revenue'))
-        self._revenue = wx.StaticText(self)
+        self._revenue = wx.StaticText(self,
+                                      style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self._revenue.SetFont(self.GetFont().Bold())
-        balances.Add(self._revenue,
-                     wx.SizerFlags().Right())
+        balances.Add(self._revenue, wx.SizerFlags().Expand())
 
         balances.Add(wx.StaticText(self, label='Address balance'))
-        self._balance = wx.StaticText(self)
+        self._balance = wx.StaticText(self,
+                                      style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self._balance.SetFont(self.GetFont().Bold())
-        balances.Add(self._balance,
-                     wx.SizerFlags().Right())
+        balances.Add(self._balance, wx.SizerFlags().Expand())
 
     def read_settings(self, new_settings):
         self._settings = new_settings
