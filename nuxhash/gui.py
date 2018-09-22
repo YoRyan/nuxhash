@@ -82,7 +82,11 @@ class SettingsScreen(wx.Panel):
 
         basic_sizer.Add(wx.StaticText(basic_form, label='Region'),
                         form_sizer_flags)
-        self.region = wx.Choice(basic_form, choices=REGIONS)
+        self.region = ChoiceByValue(
+            basic_form,
+            choices=REGIONS,
+            fallback_choice=settings.DEFAULT_SETTINGS['nicehash']['region']
+            )
         self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self.region)
         basic_sizer.Add(self.region, form_sizer_flags)
 
@@ -118,7 +122,11 @@ class SettingsScreen(wx.Panel):
             wx.StaticText(advanced_form, label='Display units'),
             form_sizer_flags
             )
-        self.units = wx.Choice(advanced_form, choices=UNITS)
+        self.units = ChoiceByValue(
+            advanced_form,
+            choices=UNITS,
+            fallback_choice=settings.DEFAULT_SETTINGS['gui']['units']
+            )
         self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self.units)
         advanced_sizer.Add(self.units, form_sizer_flags)
 
@@ -189,21 +197,24 @@ class SettingsScreen(wx.Panel):
         self.save.Disable()
         self.wallet.ChangeValue(nx_settings['nicehash']['wallet'])
         self.worker.ChangeValue(nx_settings['nicehash']['workername'])
-        set_choice(self.region, REGIONS, nx_settings['nicehash']['region'],
-                   fallback=settings.DEFAULT_SETTINGS['nicehash']['region'])
+        self.region.SetValue(nx_settings['nicehash']['region'])
         self.interval.SetValue(nx_settings['switching']['interval'])
         self.threshold.SetValue(nx_settings['switching']['threshold']*100)
-        set_choice(self.units, UNITS, nx_settings['gui']['units'],
-                   fallback=settings.DEFAULT_SETTINGS['gui']['units'])
+        self.units.SetValue(nx_settings['gui']['units'])
 
 
-def set_choice(wx_choice, options, value, fallback=None):
-    if value in options:
-        wx_choice.SetSelection(options.index(value))
-    elif fallback is not None:
-        wx_choice.SetSelection(options.index(fallback))
-    else:
-        wx_choice.SetSelection(0)
+class ChoiceByValue(wx.Choice):
+
+    def __init__(self, *args, choices=[], fallback_choice='', **kwargs):
+        wx.Choice.__init__(self, *args, choices=choices, **kwargs)
+        self._choices = choices
+        self._fallback = fallback_choice
+
+    def SetValue(self, value):
+        if value in self._choices:
+            wx.Choice.SetSelection(self, self._choices.index(value))
+        else:
+            wx.Choice.SetSelection(self, self._choices.index(self._fallback))
 
 
 def main():
