@@ -3,5 +3,5 @@ def nuxhashd():
     main()
 
 def nuxhash_gui():
-    from nuxhash.gui import main
+    from nuxhash.gui.main import main
     main()

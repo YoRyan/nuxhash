@@ -1,105 +1,14 @@
 from copy import deepcopy
 from functools import wraps
-from time import sleep
 
 import wx
-from wx.lib.newevent import NewEvent
 
-from nuxhash import settings, utils
-from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
-from nuxhash.nicehash import unpaid_balance, simplemultialgo_info
+from nuxhash import settings
+from nuxhash.gui import main
 
 
-FIELD_BORDER = 10
 REGIONS = ['eu', 'usa', 'jp', 'hk']
 UNITS = ['BTC', 'mBTC']
-
-
-class MainWindow(wx.Frame):
-
-    def __init__(self, parent, *args, **kwargs):
-        wx.Frame.__init__(self, parent, *args, **kwargs)
-        self.SetSizeHints(minW=500, minH=500)
-        self._devices = []
-        self._settings = None
-        self._benchmarks = None
-        notebook = wx.Notebook(self)
-
-        self._mining_screen = MiningScreen(notebook)
-        notebook.AddPage(self._mining_screen, text='Mining')
-
-        def settings_callback(new_settings):
-            self.read_settings(new_settings)
-            self._save_persist()
-        self._settings_screen = SettingsScreen(notebook,
-                                               commit_callback=settings_callback)
-        notebook.AddPage(self._settings_screen, text='Settings')
-
-        self._probe_devices()
-        self._load_persist()
-
-    def read_settings(self, new_settings):
-        self._settings = new_settings
-        for s in [self._settings_screen,
-                  self._mining_screen]:
-            s.read_settings(new_settings)
-
-    def _probe_devices(self):
-        self._devices = nvidia_devices()
-
-    def _load_persist(self):
-        nx_settings, nx_benchmarks = settings.load_persistent_data(
-            settings.DEFAULT_CONFIGDIR,
-            self._devices
-            )
-        self.read_settings(nx_settings)
-        self._benchmarks = nx_benchmarks
-
-    def _save_persist(self):
-        settings.save_persistent_data(settings.DEFAULT_CONFIGDIR,
-                                      self._settings, self._benchmarks)
-
-
-class MiningScreen(wx.Panel):
-
-    def __init__(self, parent, *args, **kwargs):
-        wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._settings = None
-        sizer = wx.BoxSizer(orient=wx.VERTICAL)
-        sizer_flags = wx.SizerFlags().Border(wx.ALL, FIELD_BORDER)
-        self.SetSizer(sizer)
-
-        sizer.AddStretchSpacer()
-
-        # Add balance displays.
-        balances = wx.FlexGridSizer(2, 2, FIELD_BORDER, FIELD_BORDER)
-        balances.AddGrowableCol(1)
-        sizer.Add(balances, sizer_flags.Expand())
-
-        balances.Add(wx.StaticText(self, label='Daily revenue'))
-        self._revenue = wx.StaticText(self,
-                                      style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
-        self._revenue.SetFont(self.GetFont().Bold())
-        balances.Add(self._revenue, wx.SizerFlags().Expand())
-
-        balances.Add(wx.StaticText(self, label='Address balance'))
-        self._balance = wx.StaticText(self,
-                                      style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
-        self._balance.SetFont(self.GetFont().Bold())
-        balances.Add(self._balance, wx.SizerFlags().Expand())
-
-    def read_settings(self, new_settings):
-        self._settings = new_settings
-        # TODO
-        self.set_balance(unpaid_balance(self._settings['nicehash']['wallet']))
-
-    def set_revenue(self, v):
-        unit = self._settings['gui']['units']
-        self._revenue.SetLabel(utils.format_balance(v, unit))
-
-    def set_balance(self, v):
-        unit = self._settings['gui']['units']
-        self._balance.SetLabel(utils.format_balance(v, unit))
 
 
 class SettingsScreen(wx.Panel):
@@ -112,14 +21,14 @@ class SettingsScreen(wx.Panel):
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
-        sizer_flags = wx.SizerFlags().Border(wx.ALL, FIELD_BORDER)
+        sizer_flags = wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
         form_sizer_flags = (wx.SizerFlags().Center()
                                            .Left())
 
         # Add basic setting controls.
         basic_form = wx.Window(self)
         sizer.Add(basic_form, sizer_flags)
-        basic_sizer = wx.FlexGridSizer(3, 2, FIELD_BORDER, FIELD_BORDER)
+        basic_sizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
         basic_sizer.AddGrowableCol(1)
         basic_form.SetSizer(basic_sizer)
 
@@ -151,7 +60,7 @@ class SettingsScreen(wx.Panel):
         # Add advanced setting controls.
         advanced_form = wx.Window(self)
         sizer.Add(advanced_form, sizer_flags)
-        advanced_sizer = wx.FlexGridSizer(3, 2, FIELD_BORDER, FIELD_BORDER)
+        advanced_sizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
         advanced_sizer.AddGrowableCol(1)
         advanced_form.SetSizer(advanced_sizer)
 
@@ -198,7 +107,7 @@ class SettingsScreen(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnRevert, self.revert)
         save_sizer.Add(self.revert)
 
-        save_sizer.AddSpacer(FIELD_BORDER)
+        save_sizer.AddSpacer(main.PADDING_PX)
 
         self.save = wx.Button(save_form, label='Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, self.save)
@@ -270,11 +179,4 @@ class ChoiceByValue(wx.Choice):
             wx.Choice.SetSelection(self, self._choices.index(value))
         else:
             wx.Choice.SetSelection(self, self._choices.index(self._fallback))
-
-
-def main():
-    app = wx.App(False)
-    frame = MainWindow(None, title='nuxhash')
-    frame.Show()
-    app.MainLoop()
 
