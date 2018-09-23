@@ -2,7 +2,6 @@ import wx
 
 from nuxhash import utils
 from nuxhash.gui import main
-from nuxhash.nicehash import unpaid_balance, simplemultialgo_info
 
 
 class MiningScreen(wx.Panel):
@@ -35,8 +34,6 @@ class MiningScreen(wx.Panel):
 
     def read_settings(self, new_settings):
         self._settings = new_settings
-        # TODO
-        self.set_balance(unpaid_balance(self._settings['nicehash']['wallet']))
 
     def set_revenue(self, v):
         unit = self._settings['gui']['units']
