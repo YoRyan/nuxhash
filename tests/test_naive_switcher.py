@@ -6,7 +6,9 @@ import tests
 from nuxhash.miners.excavator import Excavator
 from nuxhash.switching.naive import NaiveSwitcher
 
+
 class TestNaiveSwitcher(TestCase):
+
     def setUp(self):
         settings = nuxhash.settings.DEFAULT_SETTINGS
         settings['switching']['threshold'] = 0.5
@@ -52,6 +54,7 @@ class TestNaiveSwitcher(TestCase):
                                                     self.neoscrypt: 3.5 } }, None)
 
         self.assertEqual(decision[device], self.neoscrypt)
+
 
 if __name__ == '__main__':
     main()

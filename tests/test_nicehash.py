@@ -33,7 +33,8 @@ class TestNHMultialgo(TestCase):
         self.assertGreaterEqual(self.payrates['cryptonight'], 0.0)
 
     def test_stratum(self):
-        self.assertEqual(self.stratums['cryptonight'], 'cryptonight.eu.nicehash.com:3355')
+        self.assertEqual(self.stratums['cryptonight'],
+                         'cryptonight.eu.nicehash.com:3355')
 
 if __name__ == '__main__':
     main()
