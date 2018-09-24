@@ -28,7 +28,7 @@ class SettingsScreen(wx.Panel):
         # Add basic setting controls.
         basic_form = wx.Window(self)
         sizer.Add(basic_form, sizer_flags)
-        basic_sizer = wx.FlexGridSizer(3, 2, main.PADDING_PX)
+        basic_sizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
         basic_sizer.AddGrowableCol(1)
         basic_form.SetSizer(basic_sizer)
 
