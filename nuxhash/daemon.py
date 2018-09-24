@@ -11,15 +11,14 @@ from pathlib import Path
 from ssl import SSLError
 from threading import Event
 from time import sleep
-from urllib.error import HTTPError, URLError
+from urllib.error import URLError
 
-from nuxhash import settings, utils
+from nuxhash import nicehash, settings, utils
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.download.downloads import make_miners
 from nuxhash.miners.excavator import Excavator
 from nuxhash.miners.miner import MinerNotRunning
-from nuxhash.nicehash import simplemultialgo_info
 from nuxhash.switching.naive import NaiveSwitcher
 
 BENCHMARK_SECS = 90
@@ -101,7 +100,7 @@ def initial_setup():
     return wallet, workername, region
 
 def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
-    stratums = simplemultialgo_info(settings)[1]
+    mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
 
     logger = logging.getLogger()
     log_level = logger.getEffectiveLevel()
@@ -182,9 +181,9 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
     mbtc_per_hash = download_time = stratums = None
     while mbtc_per_hash is None:
         try:
-            mbtc_per_hash, stratums = simplemultialgo_info(nx_settings)
-        except (HTTPError, URLError, socket.error, socket.timeout):
-            pass
+            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
+        except (socket.error, socket.timeout, SSLError, URLError):
+            sleep(5)
         else:
             download_time = datetime.now()
 
@@ -236,17 +235,11 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
 
         # query nicehash profitability data again
         try:
-            mbtc_per_hash = simplemultialgo_info(nx_settings)[0]
-        except URLError as err:
-            logging.warning('Failed to retrieve NiceHash profitability stats: %s' %
-                            err.reason)
-        except HTTPError as err:
-            logging.warning('Failed to retrieve NiceHash profitability stats: %s %s' %
-                            (err.code, err.reason))
-        except (socket.timeout, SSLError):
-            logging.warning('Failed to retrieve NiceHash profitability stats: timed out')
-        except (ValueError, KeyError):
-            logging.warning('Failed to retrieve NiceHash profitability stats: bad response')
+            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
+        except (socket.error, socket.timeout, SSLError, URLError) as err:
+            logging.warning('NiceHash stats: %s' % err)
+        except nicehash.BadResponseError:
+            logging.warning('NiceHash stats: Bad response')
         else:
             download_time = datetime.now()
 

@@ -2,6 +2,7 @@ from time import sleep
 
 from nuxhash.miners.miner import MinerNotRunning
 
+
 def format_speed(s):
     """Turn a high hashes/second value into a human-readable string."""
     if s >= 1e18:
@@ -19,9 +20,11 @@ def format_speed(s):
     else:
         return '%6.2f  H/s' % s
 
+
 def format_speeds(speeds):
     """Turn a list of hashes/second values into a human-readable string."""
     return ', '.join([format_speed(s) for s in speeds])
+
 
 def format_time(seconds):
     """Turn a high seconds value into a human-readable string."""
@@ -34,12 +37,14 @@ def format_time(seconds):
     else:
         return '%1d:%02d' % (m, s)
 
+
 def format_balance(v, unit):
     """Turn a Bitcoin balance into a string with requested unit."""
     if unit == 'BTC':
         return '%.8f BTC' % v
     elif unit == 'mBTC':
         return '%.5f mBTC' % (v*1e3)
+
 
 def run_benchmark(algorithm, device, warmup_duration, sample_duration,
                   sample_callback=lambda sample, secs_remaining: None):

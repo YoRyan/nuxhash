@@ -6,10 +6,13 @@ from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.download.downloads import make_miners
 from nuxhash.miners.excavator import Excavator
 
+
 devices = nvidia_devices()
+
 
 @unittest.skipIf(len(devices) == 0, 'requires an nvidia graphics card')
 class TestExcavator(unittest.TestCase):
+
     def setUp(self):
         self.configdir = nuxhash.settings.DEFAULT_CONFIGDIR
         self.settings = nuxhash.settings.DEFAULT_SETTINGS
@@ -96,6 +99,12 @@ class TestExcavator(unittest.TestCase):
         self.equihash.set_devices([])
         self.assertEqual(self._get_algorithms(), ['neoscrypt'])
 
+    def test_set_twice(self):
+        self.equihash.set_devices([self.device])
+        sleep(1)
+        self.equihash.set_devices([self.device])
+        self.assertEqual(self._get_algorithms(), ['equihash'])
+
     def test_benchmark_mode(self):
         self.equihash.set_devices([self.device])
         sleep(1)
@@ -109,6 +118,7 @@ class TestExcavator(unittest.TestCase):
         sleep(1)
         self.equihash.set_devices([])
         self.assertEqual(self._get_workers(), [])
+
 
 if __name__ == '__main__':
     unittest.main()
