@@ -245,12 +245,8 @@ class ExcavatorAlgorithm(miner.Algorithm):
     def __init__(self, parent, excavator_algorithm, **kwargs):
         algorithms = excavator_algorithm.lower().split('_')
         miner.Algorithm.__init__(
-            self,
-            parent,
-            name='excavator_%s' % excavator_algorithm,
-            algorithms=algorithms,
-            **kwargs
-            )
+            self, parent, name='excavator_%s' % excavator_algorithm,
+            algorithms=algorithms, **kwargs)
         self._excavator_algorithm = excavator_algorithm
         self._devices = []
 

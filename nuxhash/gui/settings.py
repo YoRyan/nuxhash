@@ -47,10 +47,8 @@ class SettingsScreen(wx.Panel):
         basic_sizer.Add(wx.StaticText(basic_form, label='Region'),
                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self._region = ChoiceByValue(
-            basic_form,
-            choices=REGIONS,
-            fallback_choice=settings.DEFAULT_SETTINGS['nicehash']['region']
-            )
+            basic_form, choices=REGIONS,
+            fallback_choice=settings.DEFAULT_SETTINGS['nicehash']['region'])
         self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self._region)
         basic_sizer.Add(self._region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
@@ -67,8 +65,7 @@ class SettingsScreen(wx.Panel):
 
         advanced_sizer.Add(
             wx.StaticText(advanced_form, label='Update interval (secs)'),
-            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL)
-            )
+            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self._interval = wx.SpinCtrl(advanced_form, size=(125, -1),
                                      min=10, max=300, initial=60)
         self.Bind(wx.EVT_SPINCTRL, self.OnIntervalChange, self._interval)
@@ -77,8 +74,7 @@ class SettingsScreen(wx.Panel):
 
         advanced_sizer.Add(
             wx.StaticText(advanced_form, label='Profitability switch threshold (%)'),
-            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL)
-            )
+            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self._threshold = wx.SpinCtrl(advanced_form, size=(125, -1),
                                       min=1, max=50, initial=10)
         self.Bind(wx.EVT_SPINCTRL, self.OnThresholdChange, self._threshold)
@@ -87,13 +83,10 @@ class SettingsScreen(wx.Panel):
 
         advanced_sizer.Add(
             wx.StaticText(advanced_form, label='Display units'),
-            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL)
-            )
+            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self._units = ChoiceByValue(
-            advanced_form,
-            choices=UNITS,
-            fallback_choice=settings.DEFAULT_SETTINGS['gui']['units']
-            )
+            advanced_form, choices=UNITS,
+            fallback_choice=settings.DEFAULT_SETTINGS['gui']['units'])
         self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self._units)
         advanced_sizer.Add(self._units,
                            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))

@@ -71,9 +71,7 @@ class MainWindow(wx.Frame):
 
     def _load_persist(self):
         nx_settings, nx_benchmarks = settings.load_persistent_data(
-            CONFIG_DIR,
-            self._devices
-            )
+            CONFIG_DIR, self._devices)
         self.read_settings(nx_settings)
         self._benchmarks = nx_benchmarks
 
@@ -137,8 +135,7 @@ class MiningThread(threading.Thread):
         while mbtc_per_hash is None:
             try:
                 mbtc_per_hash, stratums = nicehash.simplemultialgo_info(
-                    self._settings
-                    )
+                    self._settings)
             except (socket.error, socket.timeout, SSLError, URLError):
                 sleep(5)
             else:
@@ -189,8 +186,7 @@ class MiningThread(threading.Thread):
 
             try:
                 mbtc_per_hash, stratums = nicehash.simplemultialgo_info(
-                    self._settings
-                    )
+                    self._settings)
             except (socket.error, socket.timeout, SSLError, URLError) as err:
                 logging.warning('NiceHash stats: %s' % err)
             except nicehash.BadResponseError:
