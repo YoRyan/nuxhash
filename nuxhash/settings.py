@@ -4,10 +4,10 @@ import os
 from collections import defaultdict
 from pathlib import Path
 
+
 DEFAULT_CONFIGDIR = Path(os.path.expanduser('~/.config/nuxhash'))
 SETTINGS_FILENAME = 'settings.conf'
 BENCHMARKS_FILENAME = 'benchmarks.json'
-
 DEFAULT_SETTINGS = {
     'nicehash': {
         'wallet': '',
@@ -27,80 +27,74 @@ DEFAULT_SETTINGS = {
         }
     }
 
+
 def read_settings_from_file(fd):
-    settings = {}
     parser = configparser.ConfigParser()
     parser.read_file(fd)
-
     def get_option(parser_method, section, option):
         try:
             return parser_method(section, option)
         except (configparser.NoSectionError, configparser.NoOptionError):
             return DEFAULT_SETTINGS[section][option]
+    return {
+        'nicehash': {
+            'wallet': get_option(parser.get, 'nicehash', 'wallet'),
+            'workername': get_option(parser.get, 'nicehash', 'workername'),
+            'region': get_option(parser.get, 'nicehash', 'region')
+            },
+        'excavator': {
+            'enabled': get_option(parser.getboolean, 'excavator', 'enabled'),
+            'port': get_option(parser.getint, 'excavator', 'port')
+            },
+        'switching': {
+            'interval': get_option(parser.getint, 'switching', 'interval'),
+            'threshold': get_option(parser.getfloat, 'switching', 'threshold')
+            },
+        'gui': {
+            'units': get_option(parser.get, 'gui', 'units')
+            }
+        }
 
-    nicehash = {}
-    nicehash['wallet'] = get_option(parser.get, 'nicehash', 'wallet')
-    nicehash['workername'] = get_option(parser.get, 'nicehash', 'workername')
-    nicehash['region'] = get_option(parser.get, 'nicehash', 'region')
-    settings['nicehash'] = nicehash
-
-    excavator = {}
-    excavator['enabled'] = get_option(parser.getboolean, 'excavator', 'enabled')
-    excavator['port'] = get_option(parser.getint, 'excavator', 'port')
-    settings['excavator'] = excavator
-
-    switching = {}
-    switching['interval'] = get_option(parser.getint, 'switching', 'interval')
-    switching['threshold'] = get_option(parser.getfloat, 'switching', 'threshold')
-    settings['switching'] = switching
-
-    gui = {}
-    gui['units'] = get_option(parser.get, 'gui', 'units')
-    settings['gui'] = gui
-
-    return settings
 
 def write_settings_to_file(fd, settings):
     parser = configparser.ConfigParser()
-
     for section in settings:
         parser.add_section(section)
         for option in settings[section]:
             value = settings[section][option]
             parser.set(section, option, str(value))
-
     parser.write(fd)
+
 
 def read_benchmarks_from_file(fd, devices):
     benchmarks = defaultdict(lambda: {})
     js = json.load(fd)
-
     for js_device in js:
-        device = next((d for d in devices if str(d) == js_device), None)
-        if device is not None:
-            # read speeds
-            js_speeds = js[js_device]
-            for algorithm in js_speeds:
-                if isinstance(js_speeds[algorithm], list):
-                    benchmarks[device][algorithm] = js_speeds[algorithm]
-                else:
-                    benchmarks[device][algorithm] = [js_speeds[algorithm]]
-
+        device = next((device for device in devices
+                       if str(device) == js_device), None)
+        if device is None:
+            continue
+        js_speeds = js[js_device]
+        for algorithm_name in js_speeds:
+            if isinstance(js_speeds[algorithm_name], list):
+                benchmarks[device][algorithm_name] = js_speeds[algorithm_name]
+            else:
+                benchmarks[device][algorithm_name] = [js_speeds[algorithm_name]]
     return benchmarks
+
 
 def write_benchmarks_to_file(fd, benchmarks):
     to_file = {}
-
     for device in benchmarks:
         to_file[str(device)] = {}
         speeds = benchmarks[device]
-        for algorithm in speeds:
-            if len(speeds[algorithm]) == 1:
-                to_file[str(device)][algorithm] = speeds[algorithm][0]
+        for algorithm_name in speeds:
+            if len(speeds[algorithm_name]) == 1:
+                to_file[str(device)][algorithm_name] = speeds[algorithm_name][0]
             else:
-                to_file[str(device)][algorithm] = speeds[algorithm]
-
+                to_file[str(device)][algorithm_name] = speeds[algorithm_name]
     json.dump(to_file, fd, indent=4)
+
 
 def load_persistent_data(config_dir, devices):
     try:
@@ -110,7 +104,6 @@ def load_persistent_data(config_dir, devices):
         if err.errno != os.errno.ENOENT:
             raise
         settings = DEFAULT_SETTINGS
-
     benchmarks = defaultdict(lambda: {})
     try:
         with open(config_dir/BENCHMARKS_FILENAME, 'r') as benchmarks_fd:
@@ -118,8 +111,8 @@ def load_persistent_data(config_dir, devices):
     except IOError as err:
         if err.errno != os.errno.ENOENT:
             raise
-
     return settings, benchmarks
+
 
 def save_persistent_data(config_dir, settings, benchmarks):
     try:
@@ -127,10 +120,8 @@ def save_persistent_data(config_dir, settings, benchmarks):
     except OSError:
         if not os.path.isdir(config_dir):
             raise
-
     with open(config_dir/SETTINGS_FILENAME, 'w') as settings_fd:
         write_settings_to_file(settings_fd, settings)
-
     with open(config_dir/BENCHMARKS_FILENAME, 'w') as benchmarks_fd:
         write_benchmarks_to_file(benchmarks_fd, benchmarks)
 

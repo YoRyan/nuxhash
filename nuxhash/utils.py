@@ -55,17 +55,18 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
                        secs_remaining < 0 indicates warmup period
     """
     SAMPLE_INTERVAL = 1
-
     algorithm.set_benchmarking(True)
     algorithm.set_devices([device])
-    # warmup period
+
+    # Run warmup period.
     for i in range(warmup_duration//SAMPLE_INTERVAL):
         if not algorithm.parent.is_running():
             raise MinerNotRunning
         sample = algorithm.current_speeds()
         sample_callback(sample, i*SAMPLE_INTERVAL - warmup_duration)
         sleep(SAMPLE_INTERVAL)
-    # actual sampling
+
+    # Perform actual sampling.
     samples = []
     for i in range(sample_duration//SAMPLE_INTERVAL):
         if not algorithm.parent.is_running():
@@ -77,7 +78,7 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
     algorithm.set_devices([])
     algorithm.set_benchmarking(False)
 
-    # return average of all samples
+    # Return average of all samples.
     def sum_list_elements(lists):
         sums = lists[0]
         for l in lists[1:]:

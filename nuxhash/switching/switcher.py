@@ -1,4 +1,5 @@
 class ProfitSwitcher(object):
+
     def __init__(self, settings):
         # current state of settings
         self.settings = settings
