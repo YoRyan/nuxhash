@@ -159,9 +159,8 @@ class MiningThread(threading.Thread):
             def revenue(device, algorithm):
                 benchmarks = self._benchmarks[device]
                 if algorithm.name in benchmarks:
-                    return sum([benchmarks[algorithm.name][i]
-                                *mbtc_per_hash[algorithm.algorithms[i]]
-                                *24*60*60
+                    return sum([mbtc_per_hash[algorithm.algorithms[i]]
+                                *benchmarks[algorithm.name][i]
                                 for i in range(len(algorithm.algorithms))])
                 else:
                     return 0.0

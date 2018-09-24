@@ -44,7 +44,8 @@ def unpaid_balance(address):
 def simplemultialgo_info(nx_settings):
     response = api_call('simplemultialgo.info', [])
     algorithms_info = response['simplemultialgo']
-    mbtc_per_hash = {algorithm['name']: float(algorithm['paying'])*1e-11
+    mbtc_per_hash = {algorithm['name']: (float(algorithm['paying'])
+                                         *1e-9) # GH -> H/s/day
                      for algorithm in algorithms_info}
     stratums = {algorithm['name']: '%s.%s.nicehash.com:%d'
                 % (algorithm['name'],
