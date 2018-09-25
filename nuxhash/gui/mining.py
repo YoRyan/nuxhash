@@ -8,6 +8,9 @@ from nuxhash.gui import main
 from nuxhash.miners.excavator import Excavator
 
 
+NVIDIA_COLOR = (66, 244, 69)
+
+
 class MiningScreen(wx.Panel):
 
     def __init__(self, parent, *args, devices=[], window=None, **kwargs):
@@ -72,9 +75,10 @@ class MiningScreen(wx.Panel):
         self._balance.SetLabel(utils.format_balance(v, unit))
 
     def set_mining(self, event):
-        daily_revenue = sum([event.mbtc_per_day_per_hash[device][algorithm]
-                             for device, algorithm in event.assignments.items()])
-        self.set_revenue(daily_revenue)
+        total_revenue = sum(event.revenue.values())
+        self.set_revenue(total_revenue)
+        self._mining.display_status(speeds=event.speeds, revenue=event.revenue,
+                                    devices=event.devices)
 
     def OnStartStop(self, event):
         self._window.toggle_mining()
@@ -102,18 +106,20 @@ class MiningPanel(wx.ScrolledCanvas):
     def read_settings(self, new_settings):
         self._settings = new_settings
 
-    def display_status(self, algorithms,
+    def display_status(self,
                        speeds=defaultdict(lambda: [0.0]),
                        revenue=defaultdict(lambda: 0.0),
                        devices=defaultdict(lambda: [])):
-        self._algorithms.DeleteWindows()
-        for algorithm in sort(algorithms, key=lambda a: a.name):
+        algorithms = list(speeds.keys())
+        algorithms.sort(key=lambda algorithm: algorithm.name)
+        for algorithm in algorithms:
             data_row = wx.BoxSizer(orient=wx.HORIZONTAL)
             self._algorithms.Add(data_row, wx.SizerFlags().Expand())
             data_row.Add(
                 wx.StaticText(
                     self,
-                    label='%s (%s)' % (self.name, ', '.join(self.algorithms))),
+                    label='%s (%s)' % (algorithm.name,
+                                       ', '.join(algorithm.algorithms))),
                 wx.SizerFlags().Proportion(2.0))
             data_row.Add(
                 wx.StaticText(self, label=utils.format_speeds(speeds[algorithm])),
@@ -121,16 +127,16 @@ class MiningPanel(wx.ScrolledCanvas):
             data_row.Add(
                 wx.StaticText(
                     self,
-                    label=utils.format_balance(revenues[algorithm],
+                    label=utils.format_balance(revenue[algorithm],
                                                self._settings['gui']['units'])),
                 wx.SizerFlags().Proportion(1.0))
 
             devices_row = wx.BoxSizer(orient=wx.VERTICAL)
-            self._algorithms.Add(devices_row, wx.SizerFlags.Expand())
-            for device in devices[algorithms]:
+            self._algorithms.Add(devices_row, wx.SizerFlags().Expand())
+            for device in devices[algorithm]:
                 text = wx.StaticText(self, label=device.name)
                 if isinstance(device, NvidiaDevice):
-                    text.SetBackgroundColor((66, 244, 69))
+                    text.SetBackgroundColour(NVIDIA_COLOR)
                 devices_row.Add(
                     text, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX))
 
