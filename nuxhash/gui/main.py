@@ -1,11 +1,12 @@
 import logging
+import sched
 import socket
 import threading
+import time
 from copy import deepcopy
 from collections import defaultdict
 from datetime import datetime
 from ssl import SSLError
-from time import sleep
 from urllib.error import URLError
 
 import wx
@@ -137,7 +138,7 @@ class MiningThread(threading.Thread):
                 mbtc_per_hash, stratums = nicehash.simplemultialgo_info(
                     self._settings)
             except (socket.error, socket.timeout, SSLError, URLError):
-                sleep(5)
+                time.sleep(5)
             else:
                 download_time = datetime.now()
         miners = [Excavator(CONFIG_DIR, self._settings)]
@@ -168,7 +169,7 @@ class MiningThread(threading.Thread):
             # Get device -> algorithm assignments from profit switcher.
             assigned_algorithm = profit_switch.decide(revenues, download_time)
             wx.PostEvent(self._window,
-                         MiningStatusEvent(mbtc_per_day_per_hash=revenues,
+                         MiningStatusEvent(payrates=mbtc_per_hash,
                                            assignments=assigned_algorithm))
             for this_algorithm in algorithms:
                 this_devices = [device for device, algorithm
