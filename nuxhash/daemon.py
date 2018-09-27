@@ -216,7 +216,7 @@ def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
             benchmarks = nx_benchmarks[device]
             if algorithm.name in benchmarks:
                 return sum([mbtc_per_hash[algorithm.algorithms[i]]
-                            *benchmarks[algorithm.name][i]]
+                            * benchmarks[algorithm.name][i]
                             for i in range(len(algorithm.algorithms))])
             else:
                 return 0.0
