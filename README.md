@@ -4,7 +4,9 @@ Linux. Like NiceHash's official Windows software, it uses NiceHash's proprietary
 the most profitable algorithm(s) for each card.
 
 At the moment, nuxhash is super-early alpha software, but it's already usable
-for headless mining on Nvidia cards.
+for headless mining on Nvidia cards. A GUI version is in progress.
+
+![GUI screenshot](https://github.com/YoRyan/nuxhash/wik/gui_alpha.png)
 
 ## Roadmap
 
