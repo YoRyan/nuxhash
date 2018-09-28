@@ -2,15 +2,16 @@ import argparse
 import logging
 import os
 import readline
+import sched
 import signal
 import socket
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from ssl import SSLError
 from threading import Event
-from time import sleep
 from urllib.error import URLError
 
 from nuxhash import nicehash, settings, utils
@@ -87,8 +88,9 @@ def main():
         list_devices(all_devices)
     else:
         nx_benchmarks = run_missing_benchmarks(
-            nx_miners, nx_settings, all_devices, defaultdict(lambda: {}))
-        do_mining(nx_miners, nx_settings, nx_benchmarks, all_devices)
+            nx_miners, nx_settings, all_devices, nx_benchmarks)
+        session = MiningSession(nx_miners, nx_settings, nx_benchmarks, all_devices)
+        session.run()
 
     settings.save_persistent_data(config_dir, nx_settings, nx_benchmarks)
 
@@ -185,71 +187,108 @@ def list_devices(nx_devices):
             print('CUDA device: %s (%s)' % (d.name, d.uuid))
 
 
-def do_mining(nx_miners, nx_settings, nx_benchmarks, nx_devices):
-    # Initialize miners.
-    logging.info('Querying NiceHash for miner connection information...')
-    mbtc_per_hash = download_time = stratums = None
-    while mbtc_per_hash is None:
-        try:
-            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
-        except (socket.error, socket.timeout, SSLError, URLError):
-            sleep(5)
-        else:
-            download_time = datetime.now()
-    for miner in nx_miners:
-        miner.stratums = stratums
-    algorithms = sum([miner.algorithms for miner in nx_miners], [])
+class MiningSession(object):
 
-    # Initialize profit-switching.
-    profit_switch = NaiveSwitcher(nx_settings)
-    profit_switch.reset()
+    PROFIT_PRIORITY = 1
+    WATCH_PRIORITY = 2
+    STOP_PRIORITY = 0
+    WATCH_INTERVAL = 15
 
-    # SIGINT signal for quitting.
-    quit = Event()
-    signal.signal(signal.SIGINT, lambda signum, frame: quit.set())
+    def __init__(self, miners, settings, benchmarks, devices):
+        self._miners = miners
+        self._settings = settings
+        self._benchmarks = benchmarks
+        self._devices = devices
+        self._last_payrates = (None, None)
+        self._quit_signal = Event()
+        self._scheduler = sched.scheduler(
+                time.time, lambda t: self._quit_signal.wait(t))
+        self._algorithms = []
+        self._profit_switch = None
 
-    current_algorithm = {d: None for d in nx_devices}
-    revenues = {d: defaultdict(lambda: 0.0) for d in nx_devices}
-    while not quit.is_set():
-        # Calculate BTC/day rates.
-        def revenue(device, algorithm):
-            benchmarks = nx_benchmarks[device]
-            if algorithm.name in benchmarks:
-                return sum([mbtc_per_hash[algorithm.algorithms[i]]
-                            *benchmarks[algorithm.name][i]]
-                            for i in range(len(algorithm.algorithms))])
+    def run(self):
+        # Initialize miners.
+        logging.info('Querying NiceHash for miner connection information...')
+        payrates = stratums = None
+        while payrates is None:
+            try:
+                payrates, stratums = nicehash.simplemultialgo_info(self._settings)
+            except (socket.error, socket.timeout, SSLError, URLError):
+                time.sleep(5)
             else:
-                return 0.0
-        revenues = {device: {algorithm: revenue(device, algorithm)
-                             for algorithm in algorithms}
-                    for device in nx_devices}
+                self._last_payrates = (payrates, datetime.now())
+        for miner in self._miners:
+            miner.stratums = stratums
+        self._algorithms = sum([miner.algorithms for miner in self._miners], [])
 
-        # Get device -> algorithm assignments from profit switcher.
-        current_algorithm = profit_switch.decide(revenues, download_time)
-        for this_algorithm in algorithms:
-            this_devices = [device for device, algorithm
-                            in current_algorithm.items()
-                            if algorithm == this_algorithm]
-            this_algorithm.set_devices(my_devices)
+        # Initialize profit-switching.
+        self._profit_switch = NaiveSwitcher(self._settings)
+        self._profit_switch.reset()
 
-        quit.wait(nx_settings['switching']['interval'])
+        # Attach the SIGINT signal for quitting.
+        signal.signal(signal.SIGINT, lambda signum, frame: self.stop())
 
-        for algorithm in current_algorithm.values():
-            if not algorithm.parent.is_running():
-                logging.error('Detected %s crash, restarting miner'
-                              % algorithm.name)
-                algorithm.parent.reload()
+        self._scheduler.enter(0, MiningSession.PROFIT_PRIORITY, self._switch_algos)
+        self._scheduler.enter(0, MiningSession.WATCH_PRIORITY, self._watch_algos)
+        self._scheduler.run()
 
+    def stop(self):
+        self._scheduler.enter(0, MiningSession.STOP_PRIORITY, self._stop_mining)
+        self._quit_signal.set()
+
+    def _switch_algos(self):
+        # Get profitability information from NiceHash.
         try:
-            mbtc_per_hash, stratums = nicehash.simplemultialgo_info(nx_settings)
+            payrates, stratums = nicehash.simplemultialgo_info(self._settings)
         except (socket.error, socket.timeout, SSLError, URLError) as err:
             logging.warning('NiceHash stats: %s' % err)
         except nicehash.BadResponseError:
             logging.warning('NiceHash stats: Bad response')
         else:
             download_time = datetime.now()
+            self._last_payrates = (payrates, download_time)
 
-    logging.info('Cleaning up')
-    for miner in nx_miners:
-        miner.unload()
+        # Calculate BTC/day rates.
+        def revenue(device, algorithm):
+            benchmarks = self._benchmarks[device]
+            if algorithm.name in benchmarks:
+                return sum([payrates[algorithm.algorithms[i]]
+                            *benchmarks[algorithm.name][i]
+                            for i in range(len(algorithm.algorithms))])
+            else:
+                return 0.0
+        revenues = {device: {algorithm: revenue(device, algorithm)
+                             for algorithm in self._algorithms}
+                    for device in self._devices}
+
+        # Get device -> algorithm assignments from profit switcher.
+        self._assignments = self._profit_switch.decide(revenues, download_time)
+        for this_algorithm in self._algorithms:
+            this_devices = [device for device, algorithm
+                            in self._assignments.items()
+                            if algorithm == this_algorithm]
+            this_algorithm.set_devices(this_devices)
+
+        self._scheduler.enter(self._settings['switching']['interval'],
+                              MiningSession.PROFIT_PRIORITY, self._switch_algos)
+
+    def _watch_algos(self):
+        running_algorithms = self._assignments.values()
+        for algorithm in running_algorithms:
+            if not algorithm.parent.is_running():
+                logging.error('Detected %s crash, restarting miner'
+                              % algorithm.name)
+                algorithm.parent.reload()
+        self._scheduler.enter(MiningSession.WATCH_INTERVAL,
+                              MiningSession.WATCH_PRIORITY, self._watch_algos)
+
+    def _stop_mining(self):
+        logging.info('Cleaning up')
+        for algorithm in self._algorithms:
+            algorithm.set_devices([])
+        for miner in self._miners:
+            miner.unload()
+        # Empty the scheduler.
+        for job in self._scheduler.queue:
+            self._scheduler.cancel(job)
 

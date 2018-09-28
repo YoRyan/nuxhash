@@ -11,15 +11,15 @@ class NaiveSwitcher(ProfitSwitcher):
         # dict of device -> algorithm
         self.last_decision = defaultdict(lambda: None)
 
-    def decide(self, mbtc_per_day_per_device, timestamp):
+    def decide(self, btc_per_day_per_device, timestamp):
         decision = {}
-        for device, revenues in mbtc_per_day_per_device.items():
+        for device, revenues in btc_per_day_per_device.items():
             switch_algo, switch_revenue = max(revenues.items(), key=lambda p: p[1])
             stay_algo = self.last_decision[device]
 
             if stay_algo is None:
                 logging.info('Assigning %s to %s (%.3f mBTC/day)'
-                             % (device, switch_algo.name, switch_revenue))
+                             % (device, switch_algo.name, switch_revenue*1e3))
                 decision[device] = switch_algo
             elif switch_algo != stay_algo:
                 stay_revenue = revenues[stay_algo]
