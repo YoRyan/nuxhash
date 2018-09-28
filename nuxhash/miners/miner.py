@@ -68,6 +68,10 @@ class Algorithm(object):
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)
 
+    def accepts(self, device):
+        """Check if this algorithm will run on this device."""
+        return False
+
     def set_devices(self, devices):
         """Run this algorithm on the set of devices."""
         pass

@@ -5,6 +5,7 @@ import subprocess
 import threading
 from time import sleep
 
+from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.miners import miner
 
 
@@ -160,6 +161,10 @@ class ExcavatorServer(object):
                       for device_data in response['devices']}
         self.device_map = bus_to_idx
 
+    def supports(self, device):
+        return (isinstance(device, NvidiaDevice)
+                and device.pci_bus in self.device_map)
+
     def start_work(self, algorithm, device, benchmarking=False):
         """Start running algorithm on device."""
         # Create associated algorithm(s).
@@ -251,7 +256,12 @@ class ExcavatorAlgorithm(miner.Algorithm):
         self._devices = []
 
     @miner.needs_miner_running
+    def accepts(self, device):
+        return self.parent.server.supports(device)
+
+    @miner.needs_miner_running
     def set_devices(self, devices):
+        assert all(self.parent.server.supports(device) for device in devices)
         self._transition(set(self._devices), set(devices),
                          detach=self._stop_work,
                          attach=self._start_work)

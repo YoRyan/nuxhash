@@ -55,6 +55,10 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
                        secs_remaining < 0 indicates warmup period
     """
     SAMPLE_INTERVAL = 1
+
+    if not algorithm.accepts(device):
+        return [0.0]*len(algorithm.algorithms)
+
     algorithm.set_benchmarking(True)
     algorithm.set_devices([device])
 

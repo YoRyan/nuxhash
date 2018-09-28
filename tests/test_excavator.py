@@ -5,6 +5,7 @@ import nuxhash.settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.download.downloads import make_miners
 from nuxhash.miners.excavator import Excavator
+from tests import get_test_devices
 
 
 devices = nvidia_devices()
@@ -118,6 +119,15 @@ class TestExcavator(unittest.TestCase):
         sleep(1)
         self.equihash.set_devices([])
         self.assertEqual(self._get_workers(), [])
+
+    def test_bad_device(self):
+        device = get_test_devices()[0]
+        self.assertFalse(self.equihash.accepts(device))
+
+    def test_set_bad_device(self):
+        devices = get_test_devices()
+        self.assertRaises(AssertionError,
+                          lambda: self.equihash.set_devices(devices))
 
 
 if __name__ == '__main__':
