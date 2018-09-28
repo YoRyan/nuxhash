@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import wx
+import wx.dataview
 
 from nuxhash import utils
 from nuxhash.devices.nvidia import NvidiaDevice
@@ -23,7 +24,8 @@ class MiningScreen(wx.Panel):
 
         # Add mining panel.
         self._mining = MiningPanel(self)
-        sizer.Add(self._mining, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+        sizer.Add(self._mining, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
+                                                       main.PADDING_PX)
                                                .Proportion(1.0)
                                                .Expand())
 
@@ -91,17 +93,16 @@ class MiningPanel(wx.ScrolledCanvas):
         self._sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(self._sizer)
 
-        legend_row = wx.BoxSizer(orient=wx.HORIZONTAL)
-        self._sizer.Add(legend_row, wx.SizerFlags().Expand())
-        legend_row.Add(wx.StaticText(self, label='Algorithm'),
-                       wx.SizerFlags().Proportion(2.0))
-        legend_row.Add(wx.StaticText(self, label='Speed'),
-                       wx.SizerFlags().Proportion(1.0))
-        legend_row.Add(wx.StaticText(self, label='Revenue'),
-                       wx.SizerFlags().Proportion(1.0))
-
-        self._algorithms = wx.BoxSizer(orient=wx.VERTICAL)
-        self._sizer.Add(self._algorithms, wx.SizerFlags().Expand())
+        self._algorithms = wx.dataview.DataViewListCtrl(self)
+        self._algorithms.AppendTextColumn('Algorithm')
+        self._algorithms.AppendColumn(
+            wx.dataview.DataViewColumn('Devices', DeviceListRenderer(),
+                                       1, align=wx.ALIGN_LEFT),
+            'string')
+        self._algorithms.AppendTextColumn('Speed')
+        self._algorithms.AppendTextColumn('Revenue')
+        self._sizer.Add(self._algorithms, wx.SizerFlags().Proportion(1.0)
+                                                         .Expand())
 
     def read_settings(self, new_settings):
         self._settings = new_settings
@@ -110,33 +111,48 @@ class MiningPanel(wx.ScrolledCanvas):
                        speeds=defaultdict(lambda: [0.0]),
                        revenue=defaultdict(lambda: 0.0),
                        devices=defaultdict(lambda: [])):
+        self._algorithms.DeleteAllItems()
         algorithms = list(speeds.keys())
         algorithms.sort(key=lambda algorithm: algorithm.name)
         for algorithm in algorithms:
-            data_row = wx.BoxSizer(orient=wx.HORIZONTAL)
-            self._algorithms.Add(data_row, wx.SizerFlags().Expand())
-            data_row.Add(
-                wx.StaticText(
-                    self,
-                    label='%s (%s)' % (algorithm.name,
-                                       ', '.join(algorithm.algorithms))),
-                wx.SizerFlags().Proportion(2.0))
-            data_row.Add(
-                wx.StaticText(self, label=utils.format_speeds(speeds[algorithm])),
-                wx.SizerFlags().Proportion(1.0))
-            data_row.Add(
-                wx.StaticText(
-                    self,
-                    label=utils.format_balance(revenue[algorithm],
-                                               self._settings['gui']['units'])),
-                wx.SizerFlags().Proportion(1.0))
+            algo = '%s (%s)' % (algorithm.name, ', '.join(algorithm.algorithms))
+            devices = ','.join([DeviceListRenderer.device_to_string(device)
+                                for device in devices[algorithm]])
+            speed = utils.format_speeds(speeds[algorithm])
+            revenue = utils.format_balance(revenue[algorithm],
+                                           self._settings['gui']['units'])
+            self._algorithms.AppendItem([algo, devices, speed, revenue])
 
-            devices_row = wx.BoxSizer(orient=wx.VERTICAL)
-            self._algorithms.Add(devices_row, wx.SizerFlags().Expand())
-            for device in devices[algorithm]:
-                text = wx.StaticText(self, label=device.name)
-                if isinstance(device, NvidiaDevice):
-                    text.SetBackgroundColour(NVIDIA_COLOR)
-                devices_row.Add(
-                    text, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX))
+
+class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
+
+    def __init__(self, *args, **kwargs):
+        wx.dataview.DataViewCustomRenderer.__init__(self, *args, **kwargs)
+        self.value = None
+
+    def SetValue(self, value):
+        self.value = value
+        return True
+
+    def GetValue(self):
+        return self.value
+
+    def GetSize(self):
+        text = self.value.replace(',', '\n')
+        return self.GetTextExtent(text)
+
+    def Render(self, cell, dc, state):
+        text = self.value.replace(',', '\n')
+        self.RenderText(text, 0, cell, dc, state)
+        return True
+
+    def device_to_string(device):
+        if isinstance(device, NvidiaDevice):
+            name = device.name
+            name = name.replace('GeForce', '')
+            name = name.replace('GTX', '')
+            name = name.strip()
+            return 'NV:%s' % name
+        else:
+            raise Exception('bad device instance')
 
