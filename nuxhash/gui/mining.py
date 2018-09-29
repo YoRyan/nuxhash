@@ -89,41 +89,35 @@ class MiningScreen(wx.Panel):
         self._window.toggle_mining()
 
 
-class MiningPanel(wx.ScrolledCanvas):
+class MiningPanel(wx.dataview.DataViewListCtrl):
 
     def __init__(self, parent, *args, **kwargs):
-        wx.ScrolledCanvas.__init__(self, parent, *args, **kwargs)
-        self._sizer = wx.BoxSizer(orient=wx.VERTICAL)
-        self.SetSizer(self._sizer)
-
-        self._algorithms = wx.dataview.DataViewListCtrl(self)
-        self._algorithms.Disable()
-        self._algorithms.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
-        self._algorithms.AppendColumn(
+        wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
+        self.Disable()
+        self.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
+        self.AppendColumn(
             wx.dataview.DataViewColumn('Devices', DeviceListRenderer(),
                                        1, align=wx.ALIGN_LEFT,
                                        width=wx.COL_WIDTH_AUTOSIZE),
             'string')
-        self._algorithms.AppendTextColumn('Speed', width=wx.COL_WIDTH_AUTOSIZE)
-        self._algorithms.AppendTextColumn('Revenue')
-        self._sizer.Add(self._algorithms, wx.SizerFlags().Proportion(1.0)
-                                                         .Expand())
+        self.AppendTextColumn('Speed', width=wx.COL_WIDTH_AUTOSIZE)
+        self.AppendTextColumn('Revenue')
 
     def read_settings(self, new_settings):
         self._settings = new_settings
 
     def start_mining(self):
-        self._algorithms.Enable()
+        self.Enable()
 
     def stop_mining(self):
-        self._algorithms.Disable()
-        self._algorithms.DeleteAllItems()
+        self.Disable()
+        self.DeleteAllItems()
 
     def display_status(self,
                        speeds=defaultdict(lambda: [0.0]),
                        revenue=defaultdict(lambda: 0.0),
                        devices=defaultdict(lambda: [])):
-        self._algorithms.DeleteAllItems()
+        self.DeleteAllItems()
         algorithms = list(speeds.keys())
         algorithms.sort(key=lambda algorithm: algorithm.name)
         for algorithm in algorithms:
@@ -134,7 +128,7 @@ class MiningPanel(wx.ScrolledCanvas):
                                 for speed in speeds[algorithm]])
             revenue = utils.format_balance(revenue[algorithm],
                                            self._settings['gui']['units'])
-            self._algorithms.AppendItem([algo, devices, speed, revenue])
+            self.AppendItem([algo, devices, speed, revenue])
 
 
 class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
