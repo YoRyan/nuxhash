@@ -49,7 +49,7 @@ class MainWindow(wx.Frame):
         notebook.AddPage(self._benchmarks_screen, text='Benchmarks')
 
         def settings_callback(new_settings):
-            self.read_settings(new_settings)
+            self.settings = new_settings
             self._save_persist()
         self._settings_screen = SettingsScreen(notebook,
                                                commit_callback=settings_callback)
@@ -72,21 +72,25 @@ class MainWindow(wx.Frame):
     @benchmarks.setter
     def benchmarks(self, value):
         self._benchmarks = value
-        for s in [self._benchmarks_screen]:
-            s.benchmarks = value
+        for screen in [self._benchmarks_screen]:
+            screen.benchmarks = value
 
-    def read_settings(self, new_settings):
-        self._settings = new_settings
-        for s in [self._settings_screen,
-                  self._mining_screen]:
-            s.read_settings(new_settings)
-        self._benchmarks_screen.settings = new_settings
+    @property
+    def settings(self):
+        return self._settings
+    @settings.setter
+    def settings(self, value):
+        self._settings = value
+        for screen in [self._mining_screen,
+                       self._benchmarks_screen,
+                       self._settings_screen]:
+            screen.settings = value
         self._update_balance()
 
     def _load_persist(self):
         nx_settings, nx_benchmarks = settings.load_persistent_data(
             CONFIG_DIR, self._devices)
-        self.read_settings(nx_settings)
+        self.settings = nx_settings
         self.benchmarks = nx_benchmarks
 
     def _save_persist(self):

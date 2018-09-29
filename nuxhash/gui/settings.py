@@ -111,6 +111,22 @@ class SettingsScreen(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnSave, self._save)
         save_sizer.Add(self._save)
 
+    @property
+    def settings(self):
+        return self._settings
+    @settings.setter
+    def settings(self, value):
+        self._settings = value
+        self._new_settings = deepcopy(value)
+        self._revert.Disable()
+        self._save.Disable()
+        self._wallet.ChangeValue(value['nicehash']['wallet'])
+        self._worker.ChangeValue(value['nicehash']['workername'])
+        self._region.SetValue(value['nicehash']['region'])
+        self._interval.SetValue(value['switching']['interval'])
+        self._threshold.SetValue(value['switching']['threshold']*100)
+        self._units.SetValue(value['gui']['units'])
+
     def change_event(method):
         @wraps(method)
         def wrapper(self, *args, **kwargs):
@@ -144,25 +160,13 @@ class SettingsScreen(wx.Panel):
         self._new_settings['gui']['units'] = UNITS[event.GetSelection()]
 
     def OnRevert(self, event):
-        self.read_settings(self._settings)
+        self.settings = self._settings
 
     def OnSave(self, event):
         self._settings = deepcopy(self._new_settings)
         self._revert.Disable()
         self._save.Disable()
         self._commit_callback(self._new_settings)
-
-    def read_settings(self, nx_settings):
-        self._settings = nx_settings
-        self._new_settings = deepcopy(nx_settings)
-        self._revert.Disable()
-        self._save.Disable()
-        self._wallet.ChangeValue(nx_settings['nicehash']['wallet'])
-        self._worker.ChangeValue(nx_settings['nicehash']['workername'])
-        self._region.SetValue(nx_settings['nicehash']['region'])
-        self._interval.SetValue(nx_settings['switching']['interval'])
-        self._threshold.SetValue(nx_settings['switching']['threshold']*100)
-        self._units.SetValue(nx_settings['gui']['units'])
 
 
 class ChoiceByValue(wx.Choice):

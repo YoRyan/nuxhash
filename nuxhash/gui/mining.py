@@ -58,9 +58,13 @@ class MiningScreen(wx.Panel):
                                                          .Center())
         self.Bind(wx.EVT_BUTTON, self.OnStartStop, self._startstop)
 
-    def read_settings(self, new_settings):
-        self._settings = new_settings
-        self._mining.read_settings(new_settings)
+    @property
+    def settings(self):
+        return self._settings
+    @settings.setter
+    def settings(self, value):
+        self._settings = value
+        self._mining.settings = value
 
     def start_mining(self):
         self._startstop.SetLabel('Stop Mining')
@@ -103,8 +107,12 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
         self.AppendTextColumn('Speed', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendTextColumn('Revenue')
 
-    def read_settings(self, new_settings):
-        self._settings = new_settings
+    @property
+    def settings(self):
+        return self._settings
+    @settings.setter
+    def settings(self, value):
+        self._settings = value
 
     def start_mining(self):
         self.Enable()
