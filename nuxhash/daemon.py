@@ -137,7 +137,6 @@ def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
 
 def run_benchmarks(targets):
     if len(targets) == 0:
-        print('Nothing to benchmark.')
         return []
 
     benchmarks = defaultdict(lambda: {})
