@@ -15,6 +15,7 @@ from wx.lib.newevent import NewEvent
 from nuxhash import nicehash, settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.gui.mining import MiningScreen
+from nuxhash.gui.benchmarks import BenchmarksScreen
 from nuxhash.gui.settings import SettingsScreen
 from nuxhash.miners.excavator import Excavator
 from nuxhash.switching.naive import NaiveSwitcher
@@ -34,7 +35,7 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, *args, **kwargs):
         wx.Frame.__init__(self, parent, *args, **kwargs)
         self.SetSizeHints(minW=500, minH=500)
-        self._devices = []
+        self._devices = nvidia_devices()
         self._settings = None
         self._benchmarks = None
         notebook = wx.Notebook(self)
@@ -43,6 +44,9 @@ class MainWindow(wx.Frame):
                                            devices=self._devices,
                                            window=self)
         notebook.AddPage(self._mining_screen, text='Mining')
+
+        self._benchmarks_screen = BenchmarksScreen(notebook, devices=self._devices)
+        notebook.AddPage(self._benchmarks_screen, text='Benchmarks')
 
         def settings_callback(new_settings):
             self.read_settings(new_settings)
@@ -60,22 +64,30 @@ class MainWindow(wx.Frame):
         self._mining_thread = None
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
 
-        self._devices = nvidia_devices()
-
         self._load_persist()
+
+    @property
+    def benchmarks(self):
+        return self._benchmarks
+    @benchmarks.setter
+    def benchmarks(self, value):
+        self._benchmarks = value
+        for s in [self._benchmarks_screen]:
+            s.benchmarks = value
 
     def read_settings(self, new_settings):
         self._settings = new_settings
         for s in [self._settings_screen,
                   self._mining_screen]:
             s.read_settings(new_settings)
+        self._benchmarks_screen.settings = new_settings
         self._update_balance()
 
     def _load_persist(self):
         nx_settings, nx_benchmarks = settings.load_persistent_data(
             CONFIG_DIR, self._devices)
         self.read_settings(nx_settings)
-        self._benchmarks = nx_benchmarks
+        self.benchmarks = nx_benchmarks
 
     def _save_persist(self):
         settings.save_persistent_data(CONFIG_DIR,
