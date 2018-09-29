@@ -257,7 +257,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
 
     @miner.needs_miner_running
     def set_devices(self, devices):
-        assert all(self.parent.server.supports(device) for device in devices)
+        assert all(self.accepts(device) for device in devices)
         self._transition(set(self._devices), set(devices),
                          detach=self._stop_work,
                          attach=self._start_work)
