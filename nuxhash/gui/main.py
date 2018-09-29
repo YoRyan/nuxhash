@@ -40,9 +40,7 @@ class MainWindow(wx.Frame):
         self._benchmarks = None
         notebook = wx.Notebook(self)
 
-        self._mining_screen = MiningScreen(notebook,
-                                           devices=self._devices,
-                                           window=self)
+        self._mining_screen = MiningScreen(notebook, window=self)
         notebook.AddPage(self._mining_screen, text='Mining')
 
         self._benchmarks_screen = BenchmarksScreen(notebook, devices=self._devices)

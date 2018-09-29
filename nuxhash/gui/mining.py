@@ -14,9 +14,8 @@ NVIDIA_COLOR = (66, 244, 69)
 
 class MiningScreen(wx.Panel):
 
-    def __init__(self, parent, *args, devices=[], window=None, **kwargs):
+    def __init__(self, parent, *args, window=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._devices = devices
         self._window = window
         self._settings = None
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
