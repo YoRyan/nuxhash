@@ -89,5 +89,5 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
             for i, e in enumerate(l):
                 sums[i] += e
         return sums
-    return map(lambda total: total/len(samples), sum_list_elements(samples))
+    return list(map(lambda total: total/len(samples), sum_list_elements(samples)))
 
