@@ -101,21 +101,21 @@ class SettingsScreen(wx.Panel):
         save_sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         save_form.SetSizer(save_sizer)
 
-        self._revert = wx.Button(save_form, label='Revert')
+        self._revert = wx.Button(save_form, id=wx.ID_REVERT_TO_SAVED)
         self.Bind(wx.EVT_BUTTON, self.OnRevert, self._revert)
         save_sizer.Add(self._revert)
 
         save_sizer.AddSpacer(main.PADDING_PX)
 
-        self._save = wx.Button(save_form, label='Save')
+        self._save = wx.Button(save_form, id=wx.ID_APPLY)
         self.Bind(wx.EVT_BUTTON, self.OnSave, self._save)
         save_sizer.Add(self._save)
 
     def change_event(method):
         @wraps(method)
         def wrapper(self, *args, **kwargs):
-            self.revert.Enable()
-            self.save.Enable()
+            self._revert.Enable()
+            self._save.Enable()
             method(self, *args, **kwargs)
         return wrapper
 
