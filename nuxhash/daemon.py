@@ -23,7 +23,7 @@ from nuxhash.miners.miner import MinerNotRunning
 from nuxhash.switching.naive import NaiveSwitcher
 
 
-BENCHMARK_SECS = 90
+BENCHMARK_SECS = 60
 
 
 def main():
