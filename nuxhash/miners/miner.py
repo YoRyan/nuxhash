@@ -96,7 +96,7 @@ def needs_miner_running(method):
 
 def log_output(process):
     while process.poll() is None:
-        line = str(process.stdout.readline()).rstrip()
+        line = process.stdout.readline().decode('utf-8').rstrip()
         if line != '':
             # Reset terminal colors.
             logging.debug(line + '\033[0m')
