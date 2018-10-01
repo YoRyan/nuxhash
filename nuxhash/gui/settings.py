@@ -2,6 +2,7 @@ from copy import deepcopy
 from functools import wraps
 
 import wx
+from wx.lib.newevent import NewCommandEvent
 
 from nuxhash import settings
 from nuxhash.gui import main
@@ -10,14 +11,14 @@ from nuxhash.gui import main
 REGIONS = ['eu', 'usa', 'jp', 'hk']
 UNITS = ['BTC', 'mBTC']
 
+SettingsUpdateEvent, EVT_NEW_SETTINGS = NewCommandEvent()
+
 
 class SettingsScreen(wx.Panel):
 
-    def __init__(self, parent, commit_callback=lambda settings: None,
-                 *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._settings = self.new_settings = None
-        self._commit_callback = commit_callback
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
@@ -127,7 +128,7 @@ class SettingsScreen(wx.Panel):
         self._threshold.SetValue(value['switching']['threshold']*100)
         self._units.SetValue(value['gui']['units'])
 
-    def change_event(method):
+    def _change_event(method):
         @wraps(method)
         def wrapper(self, *args, **kwargs):
             self._revert.Enable()
@@ -135,27 +136,27 @@ class SettingsScreen(wx.Panel):
             method(self, *args, **kwargs)
         return wrapper
 
-    @change_event
+    @_change_event
     def OnWalletChange(self, event):
         self._new_settings['nicehash']['wallet'] = event.GetString()
 
-    @change_event
+    @_change_event
     def OnWorkerChange(self, event):
         self._new_settings['nicehash']['workername'] = event.GetString()
 
-    @change_event
+    @_change_event
     def OnRegionChange(self, event):
         self._new_settings['nicehash']['region'] = REGIONS[event.GetSelection()]
 
-    @change_event
+    @_change_event
     def OnIntervalChange(self, event):
         self._new_settings['switching']['interval'] = event.GetPosition()
 
-    @change_event
+    @_change_event
     def OnThresholdChange(self, event):
         self._new_settings['switching']['threshold'] = event.GetPosition()/100.0
 
-    @change_event
+    @_change_event
     def OnUnitsChange(self, event):
         self._new_settings['gui']['units'] = UNITS[event.GetSelection()]
 
@@ -166,7 +167,8 @@ class SettingsScreen(wx.Panel):
         self._settings = deepcopy(self._new_settings)
         self._revert.Disable()
         self._save.Disable()
-        self._commit_callback(self._new_settings)
+        wx.PostEvent(self, SettingsUpdateEvent(settings=self._settings,
+                                               id=wx.ID_ANY))
 
 
 class ChoiceByValue(wx.Choice):

@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import wx
 import wx.dataview
+from wx.lib.newevent import NewCommandEvent
 
 from nuxhash import utils
 from nuxhash.devices.nvidia import NvidiaDevice
@@ -11,6 +12,9 @@ from nuxhash.miners.excavator import Excavator
 
 NVIDIA_COLOR = (66, 244, 69)
 
+StartMiningEvent, EVT_START_MINING = NewCommandEvent()
+StopMiningEvent, EVT_STOP_MINING = NewCommandEvent()
+
 
 class MiningScreen(wx.Panel):
 
@@ -18,15 +22,17 @@ class MiningScreen(wx.Panel):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._window = window
         self._settings = None
+        self.Bind(main.EVT_BALANCE, self.OnNewBalance)
+        self.Bind(main.EVT_MINING_STATUS, self.OnMiningStatus)
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
         # Add mining panel.
-        self._mining = MiningPanel(self)
-        sizer.Add(self._mining, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
-                                                       main.PADDING_PX)
-                                               .Proportion(1.0)
-                                               .Expand())
+        self._panel = MiningPanel(self)
+        sizer.Add(self._panel, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
+                                                      main.PADDING_PX)
+                                              .Proportion(1.0)
+                                              .Expand())
 
         bottom_sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         sizer.Add(bottom_sizer, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
@@ -52,6 +58,7 @@ class MiningScreen(wx.Panel):
         bottom_sizer.AddSpacer(main.PADDING_PX)
 
         # Add start/stop button.
+        self._mining = False
         self._startstop = wx.Button(self, label='Start Mining')
         bottom_sizer.Add(self._startstop, wx.SizerFlags().Expand()
                                                          .Center())
@@ -63,39 +70,39 @@ class MiningScreen(wx.Panel):
     @settings.setter
     def settings(self, value):
         self._settings = value
-        self._mining.settings = value
-
-    def start_mining(self):
-        self._startstop.SetLabel('Stop Mining')
-        self._mining.start_mining()
-
-    def stop_mining(self):
-        self._revenue.SetLabel('')
-        self._startstop.SetLabel('Start Mining')
-        self._mining.stop_mining()
-
-    def set_revenue(self, v):
-        unit = self._settings['gui']['units']
-        self._revenue.SetLabel(utils.format_balance(v, unit))
-
-    def set_balance(self, v):
-        unit = self._settings['gui']['units']
-        self._balance.SetLabel(utils.format_balance(v, unit))
-
-    def set_mining(self, event):
-        total_revenue = sum(event.revenue.values())
-        self.set_revenue(total_revenue)
-        self._mining.display_status(speeds=event.speeds, revenue=event.revenue,
-                                    devices=event.devices)
+        self._panel.settings = value
 
     def OnStartStop(self, event):
-        self._window.toggle_mining()
+        if self._mining:
+            wx.PostEvent(self._panel, StopMiningEvent(id=wx.ID_ANY))
+            wx.PostEvent(self.GetParent(), StopMiningEvent(id=wx.ID_ANY))
+            self._revenue.SetLabel('')
+            self._startstop.SetLabel('Start Mining')
+            self._mining = False
+        else:
+            wx.PostEvent(self._panel, StartMiningEvent(id=wx.ID_ANY))
+            wx.PostEvent(self.GetParent(), StartMiningEvent(id=wx.ID_ANY))
+            self._startstop.SetLabel('Stop Mining')
+            self._mining = True
+
+    def OnNewBalance(self, event):
+        unit = self._settings['gui']['units']
+        self._balance.SetLabel(utils.format_balance(event.balance, unit))
+
+    def OnMiningStatus(self, event):
+        total_revenue = sum(event.revenue.values())
+        unit = self._settings['gui']['units']
+        self._revenue.SetLabel(utils.format_balance(total_revenue, unit))
+        wx.PostEvent(self._panel, event)
 
 
 class MiningPanel(wx.dataview.DataViewListCtrl):
 
     def __init__(self, parent, *args, **kwargs):
         wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
+        self.Bind(EVT_START_MINING, self.OnStartMining)
+        self.Bind(EVT_STOP_MINING, self.OnStopMining)
+        self.Bind(main.EVT_MINING_STATUS, self.OnMiningStatus)
         self.Disable()
         self.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendColumn(
@@ -113,29 +120,37 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
     def settings(self, value):
         self._settings = value
 
-    def start_mining(self):
+    def OnStartMining(self, evenet):
         self.Enable()
 
-    def stop_mining(self):
+    def OnStopMining(self, evenet):
         self.Disable()
         self.DeleteAllItems()
 
-    def display_status(self,
-                       speeds=defaultdict(lambda: [0.0]),
-                       revenue=defaultdict(lambda: 0.0),
-                       devices=defaultdict(lambda: [])):
+    def OnMiningStatus(self, event):
         self.DeleteAllItems()
-        algorithms = list(speeds.keys())
+        algorithms = list(event.speeds.keys())
         algorithms.sort(key=lambda algorithm: algorithm.name)
         for algorithm in algorithms:
             algo = '%s\n(%s)' % (algorithm.name, ', '.join(algorithm.algorithms))
-            devices = ','.join([DeviceListRenderer.device_to_string(device)
-                                for device in devices[algorithm]])
+            devices = ','.join([MiningPanel._device_to_string(device)
+                                for device in event.devices[algorithm]])
             speed = ',\n'.join([utils.format_speed(speed)
-                                for speed in speeds[algorithm]])
-            revenue = utils.format_balance(revenue[algorithm],
+                                for speed in event.speeds[algorithm]])
+            revenue = utils.format_balance(event.revenue[algorithm],
                                            self._settings['gui']['units'])
             self.AppendItem([algo, devices, speed, revenue])
+
+    def _device_to_string(device):
+        if isinstance(device, NvidiaDevice):
+            name = device.name
+            name = name.replace('GeForce', '')
+            name = name.replace('GTX', '')
+            name = name.replace('RTX', '')
+            name = name.strip()
+            return 'N:%s' % name
+        else:
+            raise Exception('bad device instance')
 
 
 class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
@@ -198,15 +213,4 @@ class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
                                  + DeviceListRenderer.CORNER_RADIUS*2
                                  + DeviceListRenderer.CORNER_RADIUS))
         return True
-
-    def device_to_string(device):
-        if isinstance(device, NvidiaDevice):
-            name = device.name
-            name = name.replace('GeForce', '')
-            name = name.replace('GTX', '')
-            name = name.replace('RTX', '')
-            name = name.strip()
-            return 'N:%s' % name
-        else:
-            raise Exception('bad device instance')
 

@@ -14,9 +14,9 @@ from wx.lib.newevent import NewEvent
 
 from nuxhash import nicehash, settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
-from nuxhash.gui.mining import MiningScreen
+from nuxhash.gui import mining
 from nuxhash.gui.benchmarks import BenchmarksScreen
-from nuxhash.gui.settings import SettingsScreen
+from nuxhash.gui.settings import SettingsScreen, EVT_NEW_SETTINGS
 from nuxhash.miners.excavator import Excavator
 from nuxhash.switching.naive import NaiveSwitcher
 
@@ -40,7 +40,7 @@ class MainWindow(wx.Frame):
         self._benchmarks = None
         notebook = wx.Notebook(self)
 
-        self._mining_screen = MiningScreen(notebook, window=self)
+        self._mining_screen = mining.MiningScreen(notebook, window=self)
         notebook.AddPage(self._mining_screen, text='Mining')
 
         self._benchmarks_screen = BenchmarksScreen(notebook, devices=self._devices)
@@ -49,8 +49,7 @@ class MainWindow(wx.Frame):
         def settings_callback(new_settings):
             self.settings = new_settings
             self._save_persist()
-        self._settings_screen = SettingsScreen(notebook,
-                                               commit_callback=settings_callback)
+        self._settings_screen = SettingsScreen(notebook)
         notebook.AddPage(self._settings_screen, text='Settings')
 
         self.Bind(EVT_BALANCE, self.OnNewBalance)
@@ -58,9 +57,11 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_TIMER, lambda event: self._update_balance(), self._timer)
         self._timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
-        self._mining = False
         self._mining_thread = None
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
+        self.Bind(EVT_NEW_SETTINGS, self.OnSettingsUpdate)
+        self.Bind(mining.EVT_START_MINING, self.OnStartMining)
+        self.Bind(mining.EVT_STOP_MINING, self.OnStopMining)
 
         self._load_persist()
 
@@ -100,34 +101,29 @@ class MainWindow(wx.Frame):
         thread = threading.Thread(target=post_balance, args=(address, self))
         thread.start()
 
-    def start_mining(self):
-        if not self._mining:
-            self._mining_thread = MiningThread(self,
-                                               deepcopy(self._settings),
-                                               deepcopy(self._benchmarks),
-                                               self._devices)
-            self._mining_thread.start()
-            self._mining_screen.start_mining()
-            self._mining = True
-
-    def stop_mining(self):
-        if self._mining:
-            self._mining_thread.stop()
-            self._mining_thread.join()
-            self._mining_screen.stop_mining()
-            self._mining = False
-
-    def toggle_mining(self):
-        if self._mining:
-            self.stop_mining()
-        else:
-            self.start_mining()
-
     def OnNewBalance(self, event):
-        self._mining_screen.set_balance(event.balance)
+        wx.PostEvent(self._mining_screen, event)
 
     def OnMiningStatus(self, event):
-        self._mining_screen.set_mining(event)
+        wx.PostEvent(self._mining_screen, event)
+
+    def OnStartMining(self, event):
+        if not self._mining_thread:
+            self._mining_thread = MiningThread(
+                devices=self._devices,
+                window=self,
+                settings=deepcopy(self._settings),
+                benchmarks=deepcopy(self._benchmarks))
+            self._mining_thread.start()
+
+    def OnStopMining(self, event):
+        if self._mining_thread:
+            self._mining_thread.stop()
+            self._mining_thread.join()
+            self._mining_thread = None
+
+    def OnSettingsUpdate(self, event):
+        self.settings = event.settings
 
 
 def post_balance(address, target):
@@ -141,7 +137,9 @@ class MiningThread(threading.Thread):
     STATUS_PRIORITY = 2
     STOP_PRIORITY = 0
 
-    def __init__(self, window, settings, benchmarks, devices):
+    def __init__(self, devices=[], window=None,
+                 settings=settings.DEFAULT_SETTINGS,
+                 benchmarks=settings.EMPTY_BENCHMARKS):
         threading.Thread.__init__(self)
         self._window = window
         self._settings = settings
