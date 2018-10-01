@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
         'units': 'mBTC'
         }
     }
+EMPTY_BENCHMARKS = defaultdict(lambda: defaultdict(lambda: {}))
 
 
 def read_settings_from_file(fd):
