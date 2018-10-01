@@ -5,21 +5,20 @@ from nuxhash import utils
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners import all_miners
-from nuxhash.settings import DEFAULT_SETTINGS
 
 
 class BenchmarksScreen(wx.Panel):
 
     def __init__(self, parent, *args, devices=[], **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
+        self._devices = devices
+        self._benchmarks = self._settings = self._datamodel = None
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
         self._dataview = wx.dataview.DataViewCtrl(self)
         self._dataview.AppendTextColumn('Algorithm', 0, width=300)
         self._dataview.AppendTextColumn('Speed', 1, width=wx.COL_WIDTH_AUTOSIZE)
-        self._datamodel = BenchmarksTreeModel(devices=devices)
-        self._dataview.AssociateModel(self._datamodel)
         sizer.Add(self._dataview, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
                                                          main.PADDING_PX)
                                                  .Proportion(1.0)
@@ -39,37 +38,11 @@ class BenchmarksScreen(wx.Panel):
 
     @property
     def benchmarks(self):
-        return self._datamodel.benchmarks
-    @benchmarks.setter
-    def benchmarks(self, value):
-        self._datamodel.benchmarks = value
-
-    @property
-    def settings(self):
-        return self._datamodel.settings
-    @settings.setter
-    def settings(self, value):
-        self._datamodel.settings = value
-
-
-class BenchmarksTreeModel(wx.dataview.PyDataViewModel):
-
-    def __init__(self, *args, devices=[], **kwargs):
-        wx.dataview.PyDataViewModel.__init__(self, *args, **kwargs)
-        #self.UseWeakRefs(True)
-        self._devices = devices
-        self._benchmarks = {device: {} for device in self._devices}
-        self._settings = DEFAULT_SETTINGS
-        miners = [miner(main.CONFIG_DIR, self._settings) for miner in all_miners]
-        self._algorithms = sum([miner.algorithms for miner in miners], [])
-
-    @property
-    def benchmarks(self):
         return self._benchmarks
     @benchmarks.setter
     def benchmarks(self, value):
         self._benchmarks = value
-        #self.Cleared()
+        self._reload_model()
 
     @property
     def settings(self):
@@ -77,9 +50,33 @@ class BenchmarksTreeModel(wx.dataview.PyDataViewModel):
     @settings.setter
     def settings(self, value):
         self._settings = value
+        self._reload_model()
+
+    def _reload_model(self):
+        # We cannot simply call PyDataViewModel.Cleared() because that method
+        # (contrary to documentation) does not reload data on Linux, see
+        # https://github.com/wxWidgets/Phoenix/issues/824
+        if self._datamodel:
+            self._dataview.UnselectAll()
+            del self._datamodel
+
+        self._datamodel = BenchmarksTreeModel(devices=self._devices,
+                                              benchmarks=self._benchmarks,
+                                              settings=self._settings)
+        self._dataview.AssociateModel(self._datamodel)
+        self._datamodel.DecRef()
+
+
+class BenchmarksTreeModel(wx.dataview.PyDataViewModel):
+
+    def __init__(self, *args, devices=[], benchmarks=None,
+                 settings=None, **kwargs):
+        wx.dataview.PyDataViewModel.__init__(self, *args, **kwargs)
+        self._devices = devices
+        self._benchmarks = benchmarks
+        self._settings = settings
         miners = [miner(main.CONFIG_DIR, self._settings) for miner in all_miners]
         self._algorithms = sum([miner.algorithms for miner in miners], [])
-        #self.Cleared()
 
     def IsContainer(self, item):
         if not item:
