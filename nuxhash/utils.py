@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from time import sleep
 
 from nuxhash.miners.miner import MinerNotRunning
@@ -55,32 +56,33 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
                        secs_remaining < 0 indicates warmup period
     """
     SAMPLE_INTERVAL = 1
+    assert algorithm.accepts(device)
 
-    if not algorithm.accepts(device):
-        return [0.0]*len(algorithm.algorithms)
+    @contextmanager
+    def acquire(algorithm):
+        algorithm.set_benchmarking(True)
+        algorithm.set_devices([device])
+        yield algorithm
+        algorithm.set_devices([])
+        algorithm.set_benchmarking(False)
+    with acquire(algorithm) as running_algo:
+        # Run warmup period.
+        for i in range(warmup_duration//SAMPLE_INTERVAL):
+            if not running_algo.parent.is_running():
+                raise MinerNotRunning
+            sample = running_algo.current_speeds()
+            sample_callback(sample, i*SAMPLE_INTERVAL - warmup_duration)
+            sleep(SAMPLE_INTERVAL)
 
-    algorithm.set_benchmarking(True)
-    algorithm.set_devices([device])
-
-    # Run warmup period.
-    for i in range(warmup_duration//SAMPLE_INTERVAL):
-        if not algorithm.parent.is_running():
-            raise MinerNotRunning
-        sample = algorithm.current_speeds()
-        sample_callback(sample, i*SAMPLE_INTERVAL - warmup_duration)
-        sleep(SAMPLE_INTERVAL)
-
-    # Perform actual sampling.
-    samples = []
-    for i in range(sample_duration//SAMPLE_INTERVAL):
-        if not algorithm.parent.is_running():
-            raise MinerNotRunning
-        sample = algorithm.current_speeds()
-        samples.append(sample)
-        sample_callback(sample, sample_duration - i*SAMPLE_INTERVAL)
-        sleep(SAMPLE_INTERVAL)
-    algorithm.set_devices([])
-    algorithm.set_benchmarking(False)
+        # Perform actual sampling.
+        samples = []
+        for i in range(sample_duration//SAMPLE_INTERVAL):
+            if not running_algo.parent.is_running():
+                raise MinerNotRunning
+            sample = running_algo.current_speeds()
+            samples.append(sample)
+            sample_callback(sample, sample_duration - i*SAMPLE_INTERVAL)
+            sleep(SAMPLE_INTERVAL)
 
     # Return average of all samples.
     def sum_list_elements(lists):

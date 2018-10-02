@@ -122,7 +122,8 @@ def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
     done = sum([[(device, algorithm(algorithm_name))
                  for algorithm_name in benchmarks.keys()]
                 for device, benchmarks in old_benchmarks.items()], [])
-    all_targets = sum([[(device, algorithm) for algorithm in algorithms]
+    all_targets = sum([[(device, algorithm) for algorithm in algorithms
+                        if algorithm.accepts(device)]
                        for device in devices], [])
     benchmarks = run_benchmarks(set(all_targets) - set(done))
 
@@ -153,6 +154,8 @@ def run_benchmarks(targets):
             benchmarks[device][algorithm.name] = [0.0]*len(algorithm.algorithms)
         except KeyboardInterrupt:
             print('Benchmarking aborted (completed benchmarks saved).')
+            for algorithm in set(algorithm for device, algorithm in targets):
+                algorithm.set_devices([])
             break
     return benchmarks
 
@@ -172,9 +175,11 @@ def run_benchmark(device, algorithm):
                   % (algorithm.name, status_line, utils.format_speeds(sample),
                      utils.format_time(secs_remaining)), end='')
         sys.stdout.flush()
-    speeds = utils.run_benchmark(algorithm, device,
-                                 algorithm.warmup_secs, BENCHMARK_SECS,
-                                 sample_callback=report_speeds)
+
+    speeds = utils.run_benchmark(
+        algorithm, device, algorithm.warmup_secs, BENCHMARK_SECS,
+        sample_callback=report_speeds)
+
     print('  %s: %s                      ' % (algorithm.name,
                                               utils.format_speeds(speeds)))
     return speeds
