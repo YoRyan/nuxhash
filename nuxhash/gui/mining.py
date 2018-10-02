@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import wx
 import wx.dataview
 from wx.lib.newevent import NewCommandEvent

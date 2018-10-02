@@ -7,7 +7,6 @@ import signal
 import socket
 import sys
 import time
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from ssl import SSLError
@@ -59,8 +58,8 @@ def main():
                         level=log_level)
 
     all_devices = nvidia_devices()
-    nx_settings, nx_benchmarks = settings.load_persistent_data(config_dir,
-                                                               all_devices)
+    nx_settings = settings.load_settings(config_dir)
+    nx_benchmarks = settings.load_benchmarks(config_dir, all_devices)
 
     # If no wallet configured, do initial setup prompts.
     if nx_settings['nicehash']['wallet'] == '':
@@ -80,7 +79,7 @@ def main():
     # Select code path(s), benchmarks and/or mining.
     if args.benchmark_all:
         nx_benchmarks = run_missing_benchmarks(
-            nx_miners, nx_settings, all_devices, defaultdict(lambda: {}))
+            nx_miners, nx_settings, all_devices, settinsg.EMPTY_BENCHMARKS)
     elif args.benchmark_missing:
         nx_benchmarks = run_missing_benchmarks(
             nx_miners, nx_settings, all_devices, nx_benchmarks)
@@ -92,7 +91,8 @@ def main():
         session = MiningSession(nx_miners, nx_settings, nx_benchmarks, all_devices)
         session.run()
 
-    settings.save_persistent_data(config_dir, nx_settings, nx_benchmarks)
+    settings.save_settings(config_dir, nx_settings)
+    settings.save_benchmarks(config_dir, nx_benchmarks)
 
 
 def initial_setup():
@@ -139,7 +139,7 @@ def run_benchmarks(targets):
     if len(targets) == 0:
         return []
 
-    benchmarks = defaultdict(lambda: {})
+    benchmarks = settings.EMPTY_BENCHMARKS
     last_device = None
     for device, algorithm in sorted(targets, key=lambda t: str(t[0])):
         if device != last_device:

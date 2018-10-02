@@ -26,7 +26,7 @@ DEFAULT_SETTINGS = {
         'units': 'mBTC'
         }
     }
-EMPTY_BENCHMARKS = defaultdict(lambda: defaultdict(lambda: {}))
+EMPTY_BENCHMARKS = defaultdict(lambda: {})
 
 
 def read_settings_from_file(fd):
@@ -97,32 +97,46 @@ def write_benchmarks_to_file(fd, benchmarks):
     json.dump(to_file, fd, indent=4)
 
 
-def load_persistent_data(config_dir, devices):
+def load_settings(config_dir):
     try:
         with open(config_dir/SETTINGS_FILENAME, 'r') as settings_fd:
             settings = read_settings_from_file(settings_fd)
     except IOError as err:
         if err.errno != os.errno.ENOENT:
             raise
-        settings = DEFAULT_SETTINGS
-    benchmarks = defaultdict(lambda: {})
+        return DEFAULT_SETTINGS
+    else:
+        return settings
+
+
+def load_benchmarks(config_dir, devices):
     try:
         with open(config_dir/BENCHMARKS_FILENAME, 'r') as benchmarks_fd:
             benchmarks = read_benchmarks_from_file(benchmarks_fd, devices)
     except IOError as err:
         if err.errno != os.errno.ENOENT:
             raise
-    return settings, benchmarks
+        return EMPTY_BENCHMARKS
+    else:
+        return benchmarks
 
 
-def save_persistent_data(config_dir, settings, benchmarks):
-    try:
-        os.makedirs(config_dir)
-    except OSError:
-        if not os.path.isdir(config_dir):
-            raise
+def save_settings(config_dir, settings):
+    _mkdir(config_dir)
     with open(config_dir/SETTINGS_FILENAME, 'w') as settings_fd:
         write_settings_to_file(settings_fd, settings)
+
+
+def save_benchmarks(config_dir, benchmarks):
+    _mkdir(config_dir)
     with open(config_dir/BENCHMARKS_FILENAME, 'w') as benchmarks_fd:
         write_benchmarks_to_file(benchmarks_fd, benchmarks)
+
+
+def _mkdir(d):
+    try:
+        os.makedirs(d)
+    except OSError:
+        if not os.path.isdir(d):
+            raise
 

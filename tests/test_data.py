@@ -32,28 +32,19 @@ class TestUserData(TestCase):
             nuxhash.settings.write_benchmarks_to_file(fd, self.benchmarks)
         with open(testfile, 'r') as fd:
             read_benchmarks = nuxhash.settings.read_benchmarks_from_file(
-                fd,
-                self.devices
-                )
+                fd, self.devices)
         device = self.devices[0]
         self.assertEqual(self.benchmarks, read_benchmarks)
 
     def test_persistent_settings(self):
-        nuxhash.settings.save_persistent_data(self.testdir, self.settings,
-                                              self.benchmarks)
-        read_settings, read_benchmarks = nuxhash.settings.load_persistent_data(
-            self.testdir,
-            self.devices
-            )
+        nuxhash.settings.save_settings(self.testdir, self.settings)
+        read_settings = nuxhash.settings.load_settings(self.testdir)
         self.assertEqual(self.settings, read_settings)
 
     def test_persistent_benchmarks(self):
-        nuxhash.settings.save_persistent_data(self.testdir, self.settings,
-                                              self.benchmarks)
-        read_settings, read_benchmarks = nuxhash.settings.load_persistent_data(
-            self.testdir,
-            self.devices
-            )
+        nuxhash.settings.save_benchmarks(self.testdir, self.benchmarks)
+        read_benchmarks = nuxhash.settings.load_benchmarks(
+            self.testdir, self.devices)
         self.assertEqual(self.benchmarks, read_benchmarks)
 
 

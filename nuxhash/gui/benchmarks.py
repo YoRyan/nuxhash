@@ -84,9 +84,15 @@ class BenchmarksScreen(wx.Panel):
             for algorithm in algorithms:
                 sizer.Add(wx.CheckBox(pane))
                 sizer.Add(wx.StaticText(pane, label=algorithm.name))
-                speeds = self._benchmarks[device][algorithm.name]
+
+                benchmarks = self._benchmarks[device]
+                if algorithm.name in benchmarks:
+                    speeds = self._benchmarks[device][algorithm.name]
+                else:
+                    speeds = [0.0]*len(algorithm.algorithms)
                 sizer.Add(wx.StaticText(
                     pane, label=utils.format_speeds(speeds).strip()))
+        self.Layout()
 
     def OnPaneChanged(self, event):
         self.Layout()

@@ -4,7 +4,6 @@ import socket
 import threading
 import time
 from copy import deepcopy
-from collections import defaultdict
 from datetime import datetime
 from ssl import SSLError
 from urllib.error import URLError
@@ -35,9 +34,7 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, *args, **kwargs):
         wx.Frame.__init__(self, parent, *args, **kwargs)
         self.SetSizeHints(minW=500, minH=500)
-        self._devices = nvidia_devices()
-        self._settings = None
-        self._benchmarks = None
+        self._devices = self._probe_devices()
         notebook = wx.Notebook(self)
 
         self._mining_screen = mining.MiningScreen(notebook, window=self)
@@ -46,9 +43,6 @@ class MainWindow(wx.Frame):
         self._benchmarks_screen = BenchmarksScreen(notebook, devices=self._devices)
         notebook.AddPage(self._benchmarks_screen, text='Benchmarks')
 
-        def settings_callback(new_settings):
-            self.settings = new_settings
-            self._save_persist()
         self._settings_screen = SettingsScreen(notebook)
         notebook.AddPage(self._settings_screen, text='Settings')
 
@@ -63,7 +57,8 @@ class MainWindow(wx.Frame):
         self.Bind(mining.EVT_START_MINING, self.OnStartMining)
         self.Bind(mining.EVT_STOP_MINING, self.OnStopMining)
 
-        self._load_persist()
+        self.settings = settings.load_settings(CONFIG_DIR)
+        self.benchmarks = settings.load_benchmarks(CONFIG_DIR, self._devices)
 
     @property
     def benchmarks(self):
@@ -73,6 +68,7 @@ class MainWindow(wx.Frame):
         self._benchmarks = value
         for screen in [self._benchmarks_screen]:
             screen.benchmarks = value
+        settings.save_benchmarks(CONFIG_DIR, self._benchmarks)
 
     @property
     def settings(self):
@@ -85,16 +81,10 @@ class MainWindow(wx.Frame):
                        self._settings_screen]:
             screen.settings = value
         self._update_balance()
+        settings.save_settings(CONFIG_DIR, self._settings)
 
-    def _load_persist(self):
-        nx_settings, nx_benchmarks = settings.load_persistent_data(
-            CONFIG_DIR, self._devices)
-        self.settings = nx_settings
-        self.benchmarks = nx_benchmarks
-
-    def _save_persist(self):
-        settings.save_persistent_data(CONFIG_DIR,
-                                      self._settings, self._benchmarks)
+    def _probe_devices(self):
+        return nvidia_devices()
 
     def _update_balance(self):
         address = self._settings['nicehash']['wallet']
