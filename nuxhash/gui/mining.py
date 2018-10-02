@@ -114,7 +114,6 @@ class MiningScreen(wx.Panel):
     def OnStartStop(self, event):
         if self._mining:
             wx.PostEvent(self._panel, StopMiningEvent(id=wx.ID_ANY))
-            wx.PostEvent(self.GetParent(), StopMiningEvent(id=wx.ID_ANY))
 
             self._revenue.SetLabel('')
             self._startstop.SetLabel('Start Mining')
@@ -123,7 +122,6 @@ class MiningScreen(wx.Panel):
             self._mining = False
         else:
             wx.PostEvent(self._panel, StartMiningEvent(id=wx.ID_ANY))
-            wx.PostEvent(self.GetParent(), StartMiningEvent(id=wx.ID_ANY))
 
             self._startstop.SetLabel('Stop Mining')
 
