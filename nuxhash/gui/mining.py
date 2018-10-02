@@ -1,29 +1,55 @@
+import logging
+import sched
+import threading
+import time
+from copy import deepcopy
+from datetime import datetime
+from ssl import SSLError
+from urllib.error import URLError
+
 import wx
 import wx.dataview
-from wx.lib.newevent import NewCommandEvent
+from wx.lib.newevent import NewCommandEvent, NewEvent
 
-from nuxhash import utils
+from nuxhash import nicehash, utils
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners.excavator import Excavator
+from nuxhash.nicehash import unpaid_balance
+from nuxhash.settings import DEFAULT_SETTINGS, EMPTY_BENCHMARKS
+from nuxhash.switching.naive import NaiveSwitcher
 
 
+MINING_UPDATE_SECS = 5
+BALANCE_UPDATE_MIN = 5
 NVIDIA_COLOR = (66, 244, 69)
 
 StartMiningEvent, EVT_START_MINING = NewCommandEvent()
 StopMiningEvent, EVT_STOP_MINING = NewCommandEvent()
+MiningStatusEvent, EVT_MINING_STATUS = NewEvent()
+NewBalanceEvent, EVT_BALANCE = NewEvent()
 
 
 class MiningScreen(wx.Panel):
 
-    def __init__(self, parent, *args, window=None, **kwargs):
+    def __init__(self, parent, *args, devices=[], **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._window = window
-        self._settings = None
-        self.Bind(main.EVT_BALANCE, self.OnNewBalance)
-        self.Bind(main.EVT_MINING_STATUS, self.OnMiningStatus)
+        self._mining = False
+        self._thread = None
+        self._devices = devices
+        self._settings = DEFAULT_SETTINGS
+        self._benchmarks = EMPTY_BENCHMARKS
+        self.Bind(EVT_BALANCE, self.OnNewBalance)
+        self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
+
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
+
+        # Update balance periodically.
+        self.Bind(EVT_BALANCE, self.OnNewBalance)
+        self._timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, lambda event: self._update_balance(), self._timer)
+        self._timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
         # Add mining panel.
         self._panel = MiningPanel(self)
@@ -56,7 +82,6 @@ class MiningScreen(wx.Panel):
         bottom_sizer.AddSpacer(main.PADDING_PX)
 
         # Add start/stop button.
-        self._mining = False
         self._startstop = wx.Button(self, label='Start Mining')
         bottom_sizer.Add(self._startstop, wx.SizerFlags().Expand()
                                                          .Center())
@@ -69,19 +94,54 @@ class MiningScreen(wx.Panel):
     def settings(self, value):
         self._settings = value
         self._panel.settings = value
+        self._update_balance()
+
+    @property
+    def benchmarks(self):
+        return self._benchmarks
+    @benchmarks.setter
+    def benchmarks(self, value):
+        self._benchmarks = value
+
+    def _update_balance(self):
+        address = self._settings['nicehash']['wallet']
+        def request_balance(address, target):
+            balance = unpaid_balance(address)
+            wx.PostEvent(target, NewBalanceEvent(balance=balance))
+        thread = threading.Thread(target=request_balance, args=(address, self))
+        thread.start()
 
     def OnStartStop(self, event):
         if self._mining:
             wx.PostEvent(self._panel, StopMiningEvent(id=wx.ID_ANY))
             wx.PostEvent(self.GetParent(), StopMiningEvent(id=wx.ID_ANY))
+
             self._revenue.SetLabel('')
             self._startstop.SetLabel('Start Mining')
+
+            self._stop_thread()
             self._mining = False
         else:
             wx.PostEvent(self._panel, StartMiningEvent(id=wx.ID_ANY))
             wx.PostEvent(self.GetParent(), StartMiningEvent(id=wx.ID_ANY))
+
             self._startstop.SetLabel('Stop Mining')
+
+            self._start_thread()
             self._mining = True
+
+    def _start_thread(self):
+        if not self._thread:
+            self._thread = MiningThread(devices=self._devices, window=self,
+                                        settings=deepcopy(self._settings),
+                                        benchmarks=deepcopy(self._benchmarks))
+            self._thread.start()
+
+    def _stop_thread(self):
+        if self._thread:
+            self._thread.stop()
+            self._thread.join()
+            self._thread = None
 
     def OnNewBalance(self, event):
         unit = self._settings['gui']['units']
@@ -100,7 +160,7 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
         wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
         self.Bind(EVT_START_MINING, self.OnStartMining)
         self.Bind(EVT_STOP_MINING, self.OnStopMining)
-        self.Bind(main.EVT_MINING_STATUS, self.OnMiningStatus)
+        self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
         self.Disable()
         self.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendColumn(
@@ -118,10 +178,10 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
     def settings(self, value):
         self._settings = value
 
-    def OnStartMining(self, evenet):
+    def OnStartMining(self, event):
         self.Enable()
 
-    def OnStopMining(self, evenet):
+    def OnStopMining(self, event):
         self.Disable()
         self.DeleteAllItems()
 
@@ -211,4 +271,121 @@ class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
                                  + DeviceListRenderer.CORNER_RADIUS*2
                                  + DeviceListRenderer.CORNER_RADIUS))
         return True
+
+
+class MiningThread(threading.Thread):
+
+    PROFIT_PRIORITY = 1
+    STATUS_PRIORITY = 2
+    STOP_PRIORITY = 0
+
+    def __init__(self, devices=[], window=None,
+                 settings=DEFAULT_SETTINGS, benchmarks=EMPTY_BENCHMARKS):
+        threading.Thread.__init__(self)
+        self._window = window
+        self._settings = settings
+        self._benchmarks = benchmarks
+        self._devices = devices
+        self._stop_signal = threading.Event()
+        self._scheduler = sched.scheduler(
+            time.time, lambda t: self._stop_signal.wait(t))
+
+    def run(self):
+        # Initialize miners.
+        stratums = None
+        while stratums is None:
+            try:
+                payrates, stratums = nicehash.simplemultialgo_info(
+                    self._settings)
+            except (socket.error, socket.timeout, SSLError, URLError):
+                time.sleep(5)
+        self._miners = [Excavator(main.CONFIG_DIR, self._settings)]
+        for miner in self._miners:
+            miner.stratums = stratums
+        self._algorithms = sum([miner.algorithms for miner in self._miners], [])
+
+        # Initialize profit-switching.
+        self._profit_switch = NaiveSwitcher(self._settings)
+        self._profit_switch.reset()
+
+        self._scheduler.enter(0, MiningThread.PROFIT_PRIORITY, self._switch_algos)
+        self._scheduler.enter(0, MiningThread.STATUS_PRIORITY, self._read_status)
+        self._scheduler.run()
+
+    def stop(self):
+        self._scheduler.enter(0, MiningThread.STOP_PRIORITY, self._stop_mining)
+        self._stop_signal.set()
+
+    def _switch_algos(self):
+        # Get profitability information from NiceHash.
+        try:
+            payrates, stratums = nicehash.simplemultialgo_info(
+                self._settings)
+        except (socket.error, socket.timeout, SSLError, URLError) as err:
+            logging.warning('NiceHash stats: %s' % err)
+        except nicehash.BadResponseError:
+            logging.warning('NiceHash stats: Bad response')
+        else:
+            download_time = datetime.now()
+            self._current_payrates = payrates
+
+        # Calculate BTC/day rates.
+        def revenue(device, algorithm):
+            benchmarks = self._benchmarks[device]
+            if algorithm.name in benchmarks:
+                return sum([payrates[algorithm.algorithms[i]]
+                            *benchmarks[algorithm.name][i]
+                            for i in range(len(algorithm.algorithms))])
+            else:
+                return 0.0
+        revenues = {device: {algorithm: revenue(device, algorithm)
+                             for algorithm in self._algorithms}
+                    for device in self._devices}
+
+        # Get device -> algorithm assignments from profit switcher.
+        assigned_algorithm = self._profit_switch.decide(revenues, download_time)
+        self._assignments = assigned_algorithm
+        for this_algorithm in self._algorithms:
+            this_devices = [device for device, algorithm
+                            in assigned_algorithm.items()
+                            if algorithm == this_algorithm]
+            this_algorithm.set_devices(this_devices)
+
+        self._scheduler.enter(self._settings['switching']['interval'],
+                              MiningThread.PROFIT_PRIORITY, self._switch_algos)
+
+    def _read_status(self):
+        running_algorithms = self._assignments.values()
+        # Check miner status.
+        for algorithm in running_algorithms:
+            if not algorithm.parent.is_running():
+                logging.error('Detected %s crash, restarting miner'
+                              % algorithm.name)
+                algorithm.parent.reload()
+        speeds = {algorithm: algorithm.current_speeds()
+                  for algorithm in running_algorithms}
+        revenue = {algorithm: sum([self._current_payrates[multialgorithm]
+                                   *speeds[algorithm][i]
+                                   for i, multialgorithm
+                                   in enumerate(algorithm.algorithms)])
+                    for algorithm in running_algorithms}
+        devices = {algorithm: [device for device, this_algorithm
+                               in self._assignments.items()
+                               if this_algorithm == algorithm]
+                   for algorithm in running_algorithms}
+        wx.PostEvent(self._window,
+                     MiningStatusEvent(speeds=speeds, revenue=revenue,
+                                       devices=devices))
+        self._scheduler.enter(MINING_UPDATE_SECS, MiningThread.STATUS_PRIORITY,
+                              self._read_status)
+
+    def _stop_mining(self):
+        logging.info('Stopping mining')
+        for algorithm in self._algorithms:
+            algorithm.set_devices([])
+        for miner in self._miners:
+            miner.unload()
+        # Empty the scheduler.
+        for job in self._scheduler.queue:
+            self._scheduler.cancel(job)
 
