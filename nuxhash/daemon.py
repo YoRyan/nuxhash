@@ -79,7 +79,7 @@ def main():
     # Select code path(s), benchmarks and/or mining.
     if args.benchmark_all:
         nx_benchmarks = run_missing_benchmarks(
-            nx_miners, nx_settings, all_devices, settinsg.EMPTY_BENCHMARKS)
+            nx_miners, nx_settings, all_devices, settings.EMPTY_BENCHMARKS)
     elif args.benchmark_missing:
         nx_benchmarks = run_missing_benchmarks(
             nx_miners, nx_settings, all_devices, nx_benchmarks)
