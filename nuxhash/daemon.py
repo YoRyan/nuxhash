@@ -105,21 +105,17 @@ def initial_setup():
 
 
 def run_missing_benchmarks(miners, settings, devices, old_benchmarks):
-    mbtc_per_hash, stratums = nicehash.simplemultialgo_info(settings)
-
-    algorithms = sum([miner.algorithms for miner in miners], [])
-    def algorithm(name): return next((algorithm for algorithm in algorithms
-                                      if algorithm.name == name), None)
-
     # Temporarily suppress logging.
     logger = logging.getLogger()
     log_level = logger.getEffectiveLevel()
     logger.setLevel(logging.ERROR)
+
     for miner in miners:
-        miner.stratums = stratums
         miner.load()
 
-    done = sum([[(device, algorithm(algorithm_name))
+    algorithms = sum([miner.algorithms for miner in miners], [])
+    done = sum([[(device, next((algorithm for algorithm in algorithms
+                                if algorithm.name == algorithm_name), None))
                  for algorithm_name in benchmarks.keys()]
                 for device, benchmarks in old_benchmarks.items()], [])
     all_targets = sum([[(device, algorithm) for algorithm in algorithms

@@ -9,7 +9,6 @@ from nuxhash import utils
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners import all_miners
-from nuxhash.nicehash import simplemultialgo_info
 from nuxhash.settings import DEFAULT_SETTINGS
 
 
@@ -199,9 +198,7 @@ class BenchmarkThread(threading.Thread):
         self._abort = threading.Event()
 
     def run(self):
-        payrates, stratums = simplemultialgo_info(self._settings)
         for miner in self._miners:
-            miner.stratums = stratums
             miner.load()
 
         for target in self._targets:
