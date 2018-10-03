@@ -32,13 +32,14 @@ NewBalanceEvent, EVT_BALANCE = NewEvent()
 
 class MiningScreen(wx.Panel):
 
-    def __init__(self, parent, *args, devices=[], **kwargs):
+    def __init__(self, parent, *args, devices=[], frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._mining = False
         self._thread = None
+        self._frame = frame
         self._devices = devices
-        self._settings = DEFAULT_SETTINGS
-        self._benchmarks = EMPTY_BENCHMARKS
+        self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
+        self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
         self.Bind(EVT_BALANCE, self.OnNewBalance)
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
 
@@ -52,7 +53,7 @@ class MiningScreen(wx.Panel):
         self._timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
         # Add mining panel.
-        self._panel = MiningPanel(self)
+        self._panel = MiningPanel(self, frame=frame)
         sizer.Add(self._panel, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
                                                       main.PADDING_PX)
                                               .Proportion(1.0)
@@ -87,28 +88,20 @@ class MiningScreen(wx.Panel):
                                                          .Center())
         self.Bind(wx.EVT_BUTTON, self.OnStartStop, self._startstop)
 
-    @property
-    def settings(self):
-        return self._settings
-    @settings.setter
-    def settings(self, value):
-        self._settings = value
-        self._panel.settings = value
         self._update_balance()
 
-    @property
-    def benchmarks(self):
-        return self._benchmarks
-    @benchmarks.setter
-    def benchmarks(self, value):
-        self._benchmarks = value
+    def OnNewSettings(self, event):
+        self._update_balance()
+
+    def OnNewBenchmarks(self, event):
+        pass
 
     def _update_balance(self):
-        address = self._settings['nicehash']['wallet']
-        def request_balance(address, target):
+        address = self._frame.settings['nicehash']['wallet']
+        def request(address, target):
             balance = unpaid_balance(address)
             wx.PostEvent(target, NewBalanceEvent(balance=balance))
-        thread = threading.Thread(target=request_balance, args=(address, self))
+        thread = threading.Thread(target=request, args=(address, self))
         thread.start()
 
     def OnStartStop(self, event):
@@ -130,9 +123,10 @@ class MiningScreen(wx.Panel):
 
     def _start_thread(self):
         if not self._thread:
-            self._thread = MiningThread(devices=self._devices, window=self,
-                                        settings=deepcopy(self._settings),
-                                        benchmarks=deepcopy(self._benchmarks))
+            self._thread = MiningThread(
+                devices=self._devices, window=self,
+                settings=deepcopy(self._frame.settings),
+                benchmarks=deepcopy(self._frame.benchmarks))
             self._thread.start()
 
     def _stop_thread(self):
@@ -142,20 +136,21 @@ class MiningScreen(wx.Panel):
             self._thread = None
 
     def OnNewBalance(self, event):
-        unit = self._settings['gui']['units']
+        unit = self._frame.settings['gui']['units']
         self._balance.SetLabel(utils.format_balance(event.balance, unit))
 
     def OnMiningStatus(self, event):
         total_revenue = sum(event.revenue.values())
-        unit = self._settings['gui']['units']
+        unit = self._frame.settings['gui']['units']
         self._revenue.SetLabel(utils.format_balance(total_revenue, unit))
         wx.PostEvent(self._panel, event)
 
 
 class MiningPanel(wx.dataview.DataViewListCtrl):
 
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, *args, frame=None, **kwargs):
         wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
+        self._frame = frame
         self.Bind(EVT_START_MINING, self.OnStartMining)
         self.Bind(EVT_STOP_MINING, self.OnStopMining)
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
@@ -168,13 +163,6 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
             'string')
         self.AppendTextColumn('Speed', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendTextColumn('Revenue')
-
-    @property
-    def settings(self):
-        return self._settings
-    @settings.setter
-    def settings(self, value):
-        self._settings = value
 
     def OnStartMining(self, event):
         self.Enable()
@@ -194,7 +182,7 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
             speed = ',\n'.join([utils.format_speed(speed)
                                 for speed in event.speeds[algorithm]])
             revenue = utils.format_balance(event.revenue[algorithm],
-                                           self._settings['gui']['units'])
+                                           self._frame.settings['gui']['units'])
             self.AppendItem([algo, devices, speed, revenue])
 
     def _device_to_string(device):

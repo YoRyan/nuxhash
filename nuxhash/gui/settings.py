@@ -6,19 +6,20 @@ from wx.lib.newevent import NewCommandEvent
 
 from nuxhash import settings
 from nuxhash.gui import main
+from nuxhash.settings import DEFAULT_SETTINGS
 
 
 REGIONS = ['eu', 'usa', 'jp', 'hk']
 UNITS = ['BTC', 'mBTC']
 
-SettingsUpdateEvent, EVT_NEW_SETTINGS = NewCommandEvent()
-
 
 class SettingsScreen(wx.Panel):
 
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, *args, frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._settings = self.new_settings = None
+        self._new_settings = None
+        self._frame = frame
+        self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
@@ -112,21 +113,23 @@ class SettingsScreen(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnSave, self._save)
         save_sizer.Add(self._save)
 
-    @property
-    def settings(self):
-        return self._settings
-    @settings.setter
-    def settings(self, value):
-        self._settings = value
-        self._new_settings = deepcopy(value)
+        # Initialize controls.
+        self._reset()
+
+    def OnNewSettings(self, event):
+        self._reset()
+
+    def _reset(self):
+        settings = self._frame.settings
+        self._new_settings = deepcopy(settings)
         self._revert.Disable()
         self._save.Disable()
-        self._wallet.ChangeValue(value['nicehash']['wallet'])
-        self._worker.ChangeValue(value['nicehash']['workername'])
-        self._region.SetValue(value['nicehash']['region'])
-        self._interval.SetValue(value['switching']['interval'])
-        self._threshold.SetValue(value['switching']['threshold']*100)
-        self._units.SetValue(value['gui']['units'])
+        self._wallet.ChangeValue(settings['nicehash']['wallet'])
+        self._worker.ChangeValue(settings['nicehash']['workername'])
+        self._region.SetValue(settings['nicehash']['region'])
+        self._interval.SetValue(settings['switching']['interval'])
+        self._threshold.SetValue(settings['switching']['threshold']*100)
+        self._units.SetValue(settings['gui']['units'])
 
     def _change_event(method):
         @wraps(method)
@@ -161,14 +164,12 @@ class SettingsScreen(wx.Panel):
         self._new_settings['gui']['units'] = UNITS[event.GetSelection()]
 
     def OnRevert(self, event):
-        self.settings = self._settings
+        self._reset()
 
     def OnSave(self, event):
-        self._settings = deepcopy(self._new_settings)
+        self._frame.settings = deepcopy(self._new_settings)
         self._revert.Disable()
         self._save.Disable()
-        wx.PostEvent(self, SettingsUpdateEvent(settings=self._settings,
-                                               id=wx.ID_ANY))
 
 
 class ChoiceByValue(wx.Choice):

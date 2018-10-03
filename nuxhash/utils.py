@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from threading import Event
 from time import sleep
 
 from nuxhash.miners.miner import MinerNotRunning
@@ -47,13 +48,16 @@ def format_balance(v, unit):
         return '%.5f mBTC' % (v*1e3)
 
 
-def run_benchmark(algorithm, device, warmup_duration, sample_duration,
-                  sample_callback=lambda sample, secs_remaining: None):
+def run_benchmark(
+        algorithm, device, warmup_duration, sample_duration,
+        sample_callback=lambda sample, secs_remaining: None, abort_signal=Event()):
     """Run algorithm on device for duration seconds and report the average speed.
 
     Keyword arguments:
     sample_callback -- called whenever a sample is taken;
                        secs_remaining < 0 indicates warmup period
+    abort_signal -- signal to abort the benchmarking early;
+                    will return average of already taken samples
     """
     SAMPLE_INTERVAL = 1
     assert algorithm.accepts(device)
@@ -67,22 +71,26 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
         algorithm.set_benchmarking(False)
     with acquire(algorithm) as running_algo:
         # Run warmup period.
-        for i in range(warmup_duration//SAMPLE_INTERVAL):
+        i = 0
+        while i < warmup_duration//SAMPLE_INTERVAL and not abort_signal.is_set():
             if not running_algo.parent.is_running():
                 raise MinerNotRunning
             sample = running_algo.current_speeds()
             sample_callback(sample, i*SAMPLE_INTERVAL - warmup_duration)
-            sleep(SAMPLE_INTERVAL)
+            abort_signal.wait(SAMPLE_INTERVAL)
+            i += 1
 
         # Perform actual sampling.
         samples = []
-        for i in range(sample_duration//SAMPLE_INTERVAL):
+        i = 0
+        while i < sample_duration//SAMPLE_INTERVAL and not abort_signal.is_set():
             if not running_algo.parent.is_running():
                 raise MinerNotRunning
             sample = running_algo.current_speeds()
             samples.append(sample)
             sample_callback(sample, sample_duration - i*SAMPLE_INTERVAL)
-            sleep(SAMPLE_INTERVAL)
+            abort_signal.wait(SAMPLE_INTERVAL)
+            i += 1
 
     # Return average of all samples.
     def sum_list_elements(lists):
@@ -91,5 +99,6 @@ def run_benchmark(algorithm, device, warmup_duration, sample_duration,
             for i, e in enumerate(l):
                 sums[i] += e
         return sums
-    return list(map(lambda total: total/len(samples), sum_list_elements(samples)))
+    return (list(map(lambda total: total/len(samples), sum_list_elements(samples)))
+            if len(samples) > 0 else [0.0]*len(algorithm.algorithms))
 
