@@ -4,6 +4,7 @@ import threading
 import wx
 import wx.dataview
 from wx.lib.newevent import NewCommandEvent, NewEvent
+from wx.lib.pubsub import pub
 from wx.lib.scrolledpanel import ScrolledPanel
 
 from nuxhash import utils
@@ -36,6 +37,7 @@ class BenchmarksScreen(wx.Panel):
         self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
         self.Bind(main.EVT_START_MINING, self.OnStartMining)
         self.Bind(main.EVT_STOP_MINING, self.OnStopMining)
+        pub.subscribe(self._OnClose, 'app.close')
 
         self.Bind(EVT_STATUS, self.OnBenchmarkStatus)
         self.Bind(EVT_SET_VALUE, self.OnBenchmarkSet)
@@ -100,6 +102,11 @@ class BenchmarksScreen(wx.Panel):
 
     def OnStopMining(self, event):
         self._Benchmark.Enable()
+
+    def _OnClose(self):
+        if self._Thread:
+            self._Thread.stop()
+            self._Thread.join()
 
     def _Repopulate(self):
         self._Miners = [miner(main.CONFIG_DIR, self._Frame.Settings)

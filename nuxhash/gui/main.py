@@ -2,6 +2,7 @@ import logging
 
 import wx
 from wx.lib.newevent import NewCommandEvent, NewEvent
+from wx.lib.pubsub import pub
 
 from nuxhash import settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
@@ -34,6 +35,7 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_STOP_MINING, self.OnStopMining)
         self.Bind(EVT_START_BENCHMARKS, self.OnStartBenchmarking)
         self.Bind(EVT_STOP_BENCHMARKS, self.OnStopBenchmarking)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
         # Create notebook and its pages.
         notebook = wx.Notebook(self)
@@ -64,6 +66,11 @@ class MainWindow(wx.Frame):
 
     def OnStopBenchmarking(self, event):
         wx.PostEvent(self._MiningScreen, event)
+
+    def OnClose(self, event):
+        logging.info('Closing up!')
+        pub.sendMessage('app.close')
+        event.Skip()
 
     @property
     def Benchmarks(self):

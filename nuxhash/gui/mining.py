@@ -10,6 +10,7 @@ from urllib.error import URLError
 import wx
 import wx.dataview
 from wx.lib.newevent import NewCommandEvent, NewEvent
+from wx.lib.pubsub import pub
 
 from nuxhash import nicehash, utils
 from nuxhash.devices.nvidia import NvidiaDevice
@@ -42,6 +43,7 @@ class MiningScreen(wx.Panel):
         self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
         self.Bind(main.EVT_START_BENCHMARKS, self.OnStartBenchmarking)
         self.Bind(main.EVT_STOP_BENCHMARKS, self.OnStopBenchmarking)
+        pub.subscribe(self._OnClose, 'app.close')
 
         self.Bind(EVT_BALANCE, self.OnNewBalance)
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
@@ -104,6 +106,10 @@ class MiningScreen(wx.Panel):
 
     def OnStopBenchmarking(self, event):
         self._StartStop.Enable()
+
+    def _OnClose(self):
+        if self._Thread:
+            self._StopThread()
 
     def _UpdateBalance(self):
         address = self._Frame.Settings['nicehash']['wallet']
