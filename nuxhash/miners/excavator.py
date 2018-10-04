@@ -263,8 +263,9 @@ class ExcavatorAlgorithm(miner.Algorithm):
                          attach=self._start_work)
         self._devices = devices
 
-    def set_benchmarking(self, v):
-        self.benchmarking = v
+    @miner.Algorithm.benchmarking.setter
+    def benchmarking(self, v):
+        self._benchmarking = v
         devices = self._devices
         if len(devices) > 0:
             # NOTE: May break on dual mining algos, but satisfactory for now.

@@ -63,7 +63,7 @@ class Algorithm(object):
         # warmup time for benchmarking purposes (either short or long)
         self.warmup_secs = warmup_secs
         # benchmarking mode
-        self.benchmarking = False
+        self._benchmarking = False
 
     def __repr__(self):
         return "<algorithm:%s %s>" % (self.name, self.algorithms)
@@ -76,9 +76,12 @@ class Algorithm(object):
         """Run this algorithm on the set of devices."""
         pass
 
-    def set_benchmarking(self, v):
-        """Engage/disengage benchmarking mode."""
-        self.benchmarking = v
+    @property
+    def benchmarking(self):
+        return self._benchmarking
+    @benchmarking.setter
+    def benchmarking(self, v):
+        self._benchmarking = v
 
     def current_speeds(self):
         pass

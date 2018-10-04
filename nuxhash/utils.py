@@ -64,11 +64,11 @@ def run_benchmark(
 
     @contextmanager
     def acquire(algorithm):
-        algorithm.set_benchmarking(True)
+        algorithm.benchmarking = True
         algorithm.set_devices([device])
         yield algorithm
         algorithm.set_devices([])
-        algorithm.set_benchmarking(False)
+        algorithm.benchmarking = False
     with acquire(algorithm) as running_algo:
         # Run warmup period.
         i = 0
