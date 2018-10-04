@@ -37,8 +37,12 @@ class MiningScreen(wx.Panel):
         self._Thread = None
         self._Frame = frame
         self._Devices = devices
+
         self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
         self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
+        self.Bind(main.EVT_START_BENCHMARKS, self.OnStartBenchmarking)
+        self.Bind(main.EVT_STOP_BENCHMARKS, self.OnStopBenchmarking)
+
         self.Bind(EVT_BALANCE, self.OnNewBalance)
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
 
@@ -95,6 +99,12 @@ class MiningScreen(wx.Panel):
     def OnNewBenchmarks(self, event):
         pass
 
+    def OnStartBenchmarking(self, event):
+        self._StartStop.Disable()
+
+    def OnStopBenchmarking(self, event):
+        self._StartStop.Enable()
+
     def _UpdateBalance(self):
         address = self._Frame.Settings['nicehash']['wallet']
         def request(address, target):
@@ -106,6 +116,7 @@ class MiningScreen(wx.Panel):
     def OnStartStop(self, event):
         if self._Thread:
             wx.PostEvent(self._Panel, StopMiningEvent(id=wx.ID_ANY))
+            wx.PostEvent(self._Frame, main.StopMiningEvent(id=wx.ID_ANY))
 
             self._Revenue.SetLabel('')
             self._StartStop.SetLabel('Start Mining')
@@ -113,6 +124,7 @@ class MiningScreen(wx.Panel):
             self._StopThread()
         else:
             wx.PostEvent(self._Panel, StartMiningEvent(id=wx.ID_ANY))
+            wx.PostEvent(self._Frame, main.StartMiningEvent(id=wx.ID_ANY))
 
             self._StartStop.SetLabel('Stop Mining')
 

@@ -31,13 +31,18 @@ class BenchmarksScreen(wx.Panel):
         # dict of (device, algorithm) -> Item
         self._Items = {}
         self._Thread = None
+
         self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
         self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
+        self.Bind(main.EVT_START_MINING, self.OnStartMining)
+        self.Bind(main.EVT_STOP_MINING, self.OnStopMining)
+
         self.Bind(EVT_STATUS, self.OnBenchmarkStatus)
         self.Bind(EVT_SET_VALUE, self.OnBenchmarkSet)
         self.Bind(EVT_CLEAR_VALUE, self.OnBenchmarkDelete)
         self.Bind(EVT_COMPLETE, self.OnBenchmarksComplete)
         self.Bind(EVT_SPEEDS, self.OnInputSpeeds)
+
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
@@ -90,6 +95,12 @@ class BenchmarksScreen(wx.Panel):
     def OnNewBenchmarks(self, event):
         pass
 
+    def OnStartMining(self, event):
+        self._Benchmark.Disable()
+
+    def OnStopMining(self, event):
+        self._Benchmark.Enable()
+
     def _Repopulate(self):
         self._Miners = [miner(main.CONFIG_DIR, self._Frame.Settings)
                         for miner in all_miners]
@@ -125,19 +136,21 @@ class BenchmarksScreen(wx.Panel):
         self._Selection = []
 
     def OnBenchmark(self, event):
-        if not self._Thread:
+        selection = self._Selection
+        if not self._Thread and len(selection) > 0:
             self._SelectTodo.Disable()
             self._SelectNone.Disable()
             for item in self._Items.values():
                 item.checkbox.Disable()
             self._Benchmark.SetLabel('Cancel')
 
-            selection = self._Selection
+            wx.PostEvent(self._Frame, main.StartBenchmarkingEvent(id=wx.ID_ANY))
+
             self._Thread = BenchmarkThread(
                 selection, window=self,
                 settings=self._Frame.Settings, miners=self._Miners)
             self._Thread.start()
-        else:
+        elif self._Thread:
             self._Thread.stop()
             self._Thread.join()
 
@@ -167,6 +180,8 @@ class BenchmarksScreen(wx.Panel):
     def OnBenchmarksComplete(self, event):
         self._Thread.join()
         self._Thread = None
+
+        wx.PostEvent(self._Frame, main.StopBenchmarkingEvent(id=wx.ID_ANY))
 
         self._SelectTodo.Enable()
         self._SelectNone.Enable()
