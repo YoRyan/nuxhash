@@ -1,8 +1,9 @@
+import re
 import threading
 
 import wx
 import wx.dataview
-from wx.lib.newevent import NewEvent
+from wx.lib.newevent import NewCommandEvent, NewEvent
 from wx.lib.scrolledpanel import ScrolledPanel
 
 from nuxhash import utils
@@ -15,8 +16,10 @@ from nuxhash.settings import DEFAULT_SETTINGS
 BENCHMARK_SECS = 60
 
 StatusEvent, EVT_STATUS = NewEvent()
-SetEvent, EVT_SET_VALUE = NewEvent()
+SetEvent, EVT_SET_VALUE = NewCommandEvent()
+DeleteEvent, EVT_CLEAR_VALUE = NewCommandEvent()
 DoneEvent, EVT_COMPLETE = NewEvent()
+InputSpeedsEvent, EVT_SPEEDS = NewCommandEvent()
 
 
 class BenchmarksScreen(wx.Panel):
@@ -32,7 +35,9 @@ class BenchmarksScreen(wx.Panel):
         self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
         self.Bind(EVT_STATUS, self.OnBenchmarkStatus)
         self.Bind(EVT_SET_VALUE, self.OnBenchmarkSet)
+        self.Bind(EVT_CLEAR_VALUE, self.OnBenchmarkDelete)
         self.Bind(EVT_COMPLETE, self.OnBenchmarksComplete)
+        self.Bind(EVT_SPEEDS, self.OnInputSpeeds)
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
@@ -107,12 +112,7 @@ class BenchmarksScreen(wx.Panel):
                 sizer.Add(item.label)
                 sizer.Add(item.speeds)
                 self._Items[(device, algorithm)] = item
-
-                benchmarks = self._Frame.Benchmarks[device]
-                if algorithm.name in benchmarks:
-                    item.speeds.SetValues(benchmarks[algorithm.name])
-                else:
-                    item.speeds.SetValues([0.0]*len(algorithm.algorithms))
+                self._ResetSpeedCtrl(device, algorithm)
         self.Layout()
 
     def OnSelectUnmeasured(self, event):
@@ -152,9 +152,16 @@ class BenchmarksScreen(wx.Panel):
         self._Frame.Benchmarks[device][algorithm.name] = event.speeds
         # Still need to activate the setter.
         self._Frame.Benchmarks = self._Frame.Benchmarks
+        self._ResetSpeedCtrl(device, algorithm)
 
-        item = self._Items[event.target]
-        item.speeds.SetValues(event.speeds)
+    def OnBenchmarkDelete(self, event):
+        device, algorithm = event.target
+        benchmarks = self._Frame.Benchmarks[device]
+        if algorithm.name in benchmarks:
+            del benchmarks[algorithm.name]
+        # Still need to activate the setter.
+        self._Frame.Benchmarks = self._Frame.Benchmarks
+        self._ResetSpeedCtrl(device, algorithm)
 
     def OnBenchmarksComplete(self, event):
         self._Thread.join()
@@ -165,12 +172,33 @@ class BenchmarksScreen(wx.Panel):
         for (device, algorithm), item in self._Items.items():
             item.checkbox.Enable()
             # Reset speed controls in case benchmarking was aborted.
-            benchmarks = self._Frame.Benchmarks[device]
-            if algorithm.name in benchmarks:
-                item.speeds.SetValues(benchmarks[algorithm.name])
-            else:
-                item.speeds.SetValues([0.0]*len(algorithm.algorithms))
+            self._ResetSpeedCtrl(device, algorithm)
         self._Benchmark.SetLabel('Benchmark')
+
+    def OnInputSpeeds(self, event):
+        source = event.GetEventObject()
+        target = next((device, algorithm) for ((device, algorithm), item)
+                      in self._Items.items() if item.speeds == source)
+        device, algorithm = target
+        nSpeeds = len(event.speeds)
+        nNeeded = len(algorithm.algorithms)
+        if nSpeeds >= nNeeded:
+            speeds = event.speeds[:nNeeded]
+            wx.PostEvent(
+                self, SetEvent(target=target, speeds=speeds, id=wx.ID_ANY))
+        elif nSpeeds == 0:
+            wx.PostEvent(
+                self, DeleteEvent(target=target, id=wx.ID_ANY))
+        else:
+            self._ResetSpeedCtrl(device, algorithm)
+
+    def _ResetSpeedCtrl(self, device, algorithm):
+        benchmarks = self._Frame.Benchmarks[device]
+        item = self._Items[(device, algorithm)]
+        if algorithm.name in benchmarks:
+            item.speeds.SetValues(benchmarks[algorithm.name])
+        else:
+            item.speeds.SetValues([0.0]*len(algorithm.algorithms))
 
     @property
     def _Selection(self):
@@ -216,7 +244,8 @@ class BenchmarkThread(threading.Thread):
             if self._abort.is_set():
                 break
 
-            wx.PostEvent(self._window, SetEvent(target=target, speeds=speeds))
+            wx.PostEvent(
+                self._window, SetEvent(target=target, speeds=speeds, id=wx.ID_ANY))
 
         for miner in self._miners:
             miner.unload()
@@ -251,6 +280,7 @@ class SpeedCtrl(wx.TextCtrl):
                                style=wx.BORDER_NONE|wx.TE_CENTRE,
                                size=(150, 20), **kwargs)
         self._StatusPos = 0
+        self.Bind(wx.EVT_KILL_FOCUS, self._OnUnfocus)
 
     def SetValues(self, values):
         self.Enable()
@@ -258,19 +288,40 @@ class SpeedCtrl(wx.TextCtrl):
             s = '--'
         else:
             s = '; '.join(utils.format_speed(speed).strip() for speed in values)
-        self.SetValue(s)
+        self.ChangeValue(s)
 
     def SetWarmup(self, remaining):
         self.Disable()
-        self.SetValue('warming up (%d)%s' % (remaining, self._StatusDot()))
+        self.ChangeValue('warming up (%d)%s' % (remaining, self._StatusDot()))
 
     def SetBenchmark(self, values, remaining):
         self.Disable()
         s = '; '.join(utils.format_speed(speed).strip() for speed in values)
-        self.SetValue('%s (%d)%s' % (s, remaining, self._StatusDot()))
+        self.ChangeValue('%s (%d)%s' % (s, remaining, self._StatusDot()))
 
     def _StatusDot(self):
         s = ''.join('.' if i == self._StatusPos else ' ' for i in range(3))
         self._StatusPos = (self._StatusPos + 1) % 3
         return s
+
+    def _OnUnfocus(self, event):
+        speeds = []
+        speedsRe = r' *[;,]? *(\d+\.?\d*) *([EePpTtGgMmkK](?:H|H/s)?|(?:H|H/s))'
+        for match in re.finditer(speedsRe, self.GetValue()):
+            factor = {
+                'E': 1e18,
+                'P': 1e15,
+                'T': 1e12,
+                'G': 1e9,
+                'M': 1e6,
+                'K': 1e3,
+                'H': 1
+                }
+            value = float(match[1])
+            unit = match[2][0].upper()
+            speeds.append(value*factor[unit])
+
+        event = InputSpeedsEvent(speeds=speeds, id=wx.ID_ANY)
+        event.SetEventObject(self)
+        wx.PostEvent(self, event)
 
