@@ -22,51 +22,51 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, *args, **kwargs):
         wx.Frame.__init__(self, parent, *args, **kwargs)
         self.SetSizeHints(minW=500, minH=500)
-        self._devices = self._probe_devices()
-        self._settings = settings.load_settings(CONFIG_DIR)
-        self._benchmarks = settings.load_benchmarks(CONFIG_DIR, self._devices)
+        self._Devices = self._ProbeDevices()
+        self._Settings = settings.load_settings(CONFIG_DIR)
+        self._Benchmarks = settings.load_benchmarks(CONFIG_DIR, self._Devices)
 
         # Create notebook and its pages.
         notebook = wx.Notebook(self)
 
-        self._mining_screen = MiningScreen(
-            notebook, devices=self._devices, frame=self)
-        notebook.AddPage(self._mining_screen, text='Mining')
+        self._MiningScreen = MiningScreen(
+            notebook, devices=self._Devices, frame=self)
+        notebook.AddPage(self._MiningScreen, text='Mining')
 
-        self._benchmarks_screen = BenchmarksScreen(
-            notebook, devices=self._devices, frame=self)
-        notebook.AddPage(self._benchmarks_screen, text='Benchmarks')
+        self._BenchmarksScreen = BenchmarksScreen(
+            notebook, devices=self._Devices, frame=self)
+        notebook.AddPage(self._BenchmarksScreen, text='Benchmarks')
 
-        self._settings_screen = SettingsScreen(notebook, frame=self)
-        notebook.AddPage(self._settings_screen, text='Settings')
+        self._SettingsScreen = SettingsScreen(notebook, frame=self)
+        notebook.AddPage(self._SettingsScreen, text='Settings')
 
-        self._screens = [self._mining_screen,
-                         self._benchmarks_screen,
-                         self._settings_screen]
+        self._Screens = [self._MiningScreen,
+                         self._BenchmarksScreen,
+                         self._SettingsScreen]
 
     @property
-    def benchmarks(self):
-        return self._benchmarks
-    @benchmarks.setter
-    def benchmarks(self, value):
-        self._benchmarks = value
+    def Benchmarks(self):
+        return self._Benchmarks
+    @Benchmarks.setter
+    def Benchmarks(self, value):
+        self._Benchmarks = value
         logging.info('Saving user benchmarks.')
-        settings.save_benchmarks(CONFIG_DIR, self._benchmarks)
-        for screen in self._screens:
+        settings.save_benchmarks(CONFIG_DIR, self._Benchmarks)
+        for screen in self._Screens:
             wx.PostEvent(screen, NewBenchmarksEvent())
 
     @property
-    def settings(self):
-        return self._settings
-    @settings.setter
-    def settings(self, value):
-        self._settings = value
+    def Settings(self):
+        return self._Settings
+    @Settings.setter
+    def Settings(self, value):
+        self._Settings = value
         logging.info('Saving user settings.')
-        settings.save_settings(CONFIG_DIR, self._settings)
-        for screen in self._screens:
+        settings.save_settings(CONFIG_DIR, self._Settings)
+        for screen in self._Screens:
             wx.PostEvent(screen, NewSettingsEvent())
 
-    def _probe_devices(self):
+    def _ProbeDevices(self):
         return nvidia_devices()
 
 

@@ -34,10 +34,9 @@ class MiningScreen(wx.Panel):
 
     def __init__(self, parent, *args, devices=[], frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._mining = False
-        self._thread = None
-        self._frame = frame
-        self._devices = devices
+        self._Thread = None
+        self._Frame = frame
+        self._Devices = devices
         self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
         self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
         self.Bind(EVT_BALANCE, self.OnNewBalance)
@@ -48,56 +47,56 @@ class MiningScreen(wx.Panel):
 
         # Update balance periodically.
         self.Bind(EVT_BALANCE, self.OnNewBalance)
-        self._timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, lambda event: self._update_balance(), self._timer)
-        self._timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
+        self._Timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, lambda event: self._UpdateBalance(), self._Timer)
+        self._Timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
         # Add mining panel.
-        self._panel = MiningPanel(self, frame=frame)
-        sizer.Add(self._panel, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
+        self._Panel = MiningPanel(self, frame=frame)
+        sizer.Add(self._Panel, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
                                                       main.PADDING_PX)
                                               .Proportion(1.0)
                                               .Expand())
 
-        bottom_sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        sizer.Add(bottom_sizer, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
-                                               .Expand())
+        bottomSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        sizer.Add(bottomSizer, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+                                              .Expand())
 
         # Add balance displays.
         balances = wx.FlexGridSizer(2, 2, main.PADDING_PX)
         balances.AddGrowableCol(1)
-        bottom_sizer.Add(balances, wx.SizerFlags().Proportion(1.0).Expand())
+        bottomSizer.Add(balances, wx.SizerFlags().Proportion(1.0).Expand())
 
         balances.Add(wx.StaticText(self, label='Daily revenue'))
-        self._revenue = wx.StaticText(self,
-                                      style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
-        self._revenue.SetFont(self.GetFont().Bold())
-        balances.Add(self._revenue, wx.SizerFlags().Expand())
+        self._Revenue = wx.StaticText(
+            self, style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
+        self._Revenue.SetFont(self.GetFont().Bold())
+        balances.Add(self._Revenue, wx.SizerFlags().Expand())
 
         balances.Add(wx.StaticText(self, label='Address balance'))
-        self._balance = wx.StaticText(self,
-                                      style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
-        self._balance.SetFont(self.GetFont().Bold())
-        balances.Add(self._balance, wx.SizerFlags().Expand())
+        self._Balance = wx.StaticText(
+            self, style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
+        self._Balance.SetFont(self.GetFont().Bold())
+        balances.Add(self._Balance, wx.SizerFlags().Expand())
 
-        bottom_sizer.AddSpacer(main.PADDING_PX)
+        bottomSizer.AddSpacer(main.PADDING_PX)
 
         # Add start/stop button.
-        self._startstop = wx.Button(self, label='Start Mining')
-        bottom_sizer.Add(self._startstop, wx.SizerFlags().Expand()
-                                                         .Center())
-        self.Bind(wx.EVT_BUTTON, self.OnStartStop, self._startstop)
+        self._StartStop = wx.Button(self, label='Start Mining')
+        bottomSizer.Add(self._StartStop, wx.SizerFlags().Expand()
+                                                        .Center())
+        self.Bind(wx.EVT_BUTTON, self.OnStartStop, self._StartStop)
 
-        self._update_balance()
+        self._UpdateBalance()
 
     def OnNewSettings(self, event):
-        self._update_balance()
+        self._UpdateBalance()
 
     def OnNewBenchmarks(self, event):
         pass
 
-    def _update_balance(self):
-        address = self._frame.settings['nicehash']['wallet']
+    def _UpdateBalance(self):
+        address = self._Frame.Settings['nicehash']['wallet']
         def request(address, target):
             balance = unpaid_balance(address)
             wx.PostEvent(target, NewBalanceEvent(balance=balance))
@@ -105,52 +104,50 @@ class MiningScreen(wx.Panel):
         thread.start()
 
     def OnStartStop(self, event):
-        if self._mining:
-            wx.PostEvent(self._panel, StopMiningEvent(id=wx.ID_ANY))
+        if self._Thread:
+            wx.PostEvent(self._Panel, StopMiningEvent(id=wx.ID_ANY))
 
-            self._revenue.SetLabel('')
-            self._startstop.SetLabel('Start Mining')
+            self._Revenue.SetLabel('')
+            self._StartStop.SetLabel('Start Mining')
 
-            self._stop_thread()
-            self._mining = False
+            self._StopThread()
         else:
-            wx.PostEvent(self._panel, StartMiningEvent(id=wx.ID_ANY))
+            wx.PostEvent(self._Panel, StartMiningEvent(id=wx.ID_ANY))
 
-            self._startstop.SetLabel('Stop Mining')
+            self._StartStop.SetLabel('Stop Mining')
 
-            self._start_thread()
-            self._mining = True
+            self._StartThread()
 
-    def _start_thread(self):
-        if not self._thread:
-            self._thread = MiningThread(
-                devices=self._devices, window=self,
-                settings=deepcopy(self._frame.settings),
-                benchmarks=deepcopy(self._frame.benchmarks))
-            self._thread.start()
+    def _StartThread(self):
+        if not self._Thread:
+            self._Thread = MiningThread(
+                devices=self._Devices, window=self,
+                settings=deepcopy(self._Frame.Settings),
+                benchmarks=deepcopy(self._Frame.Benchmarks))
+            self._Thread.start()
 
-    def _stop_thread(self):
-        if self._thread:
-            self._thread.stop()
-            self._thread.join()
-            self._thread = None
+    def _StopThread(self):
+        if self._Thread:
+            self._Thread.stop()
+            self._Thread.join()
+            self._Thread = None
 
     def OnNewBalance(self, event):
-        unit = self._frame.settings['gui']['units']
-        self._balance.SetLabel(utils.format_balance(event.balance, unit))
+        unit = self._Frame.Settings['gui']['units']
+        self._Balance.SetLabel(utils.format_balance(event.balance, unit))
 
     def OnMiningStatus(self, event):
-        total_revenue = sum(event.revenue.values())
-        unit = self._frame.settings['gui']['units']
-        self._revenue.SetLabel(utils.format_balance(total_revenue, unit))
-        wx.PostEvent(self._panel, event)
+        totalRevenue = sum(event.revenue.values())
+        unit = self._Frame.Settings['gui']['units']
+        self._Revenue.SetLabel(utils.format_balance(totalRevenue, unit))
+        wx.PostEvent(self._Panel, event)
 
 
 class MiningPanel(wx.dataview.DataViewListCtrl):
 
     def __init__(self, parent, *args, frame=None, **kwargs):
         wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
-        self._frame = frame
+        self._Frame = frame
         self.Bind(EVT_START_MINING, self.OnStartMining)
         self.Bind(EVT_STOP_MINING, self.OnStopMining)
         self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
@@ -177,15 +174,77 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
         algorithms.sort(key=lambda algorithm: algorithm.name)
         for algorithm in algorithms:
             algo = '%s\n(%s)' % (algorithm.name, ', '.join(algorithm.algorithms))
-            devices = ','.join([MiningPanel._device_to_string(device)
+            devices = ','.join([DeviceListRenderer._DeviceToString(device)
                                 for device in event.devices[algorithm]])
             speed = ',\n'.join([utils.format_speed(speed)
                                 for speed in event.speeds[algorithm]])
             revenue = utils.format_balance(event.revenue[algorithm],
-                                           self._frame.settings['gui']['units'])
+                                           self._Frame.Settings['gui']['units'])
             self.AppendItem([algo, devices, speed, revenue])
 
-    def _device_to_string(device):
+
+class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
+
+    CORNER_RADIUS = 5
+
+    def __init__(self, *args, **kwargs):
+        wx.dataview.DataViewCustomRenderer.__init__(self, *args, **kwargs)
+        self._Devices = []
+        self._ColorDb = wx.ColourDatabase()
+
+    def SetValue(self, value):
+        vendors = {
+            'N': 'nvidia'
+            }
+        self._Devices = [{ 'name': s[2:], 'vendor': vendors[s[0]] }
+                         for s in value.split(',')]
+        return True
+
+    def GetValue(self):
+        tags = {
+            'nvidia': 'N'
+            }
+        return ','.join(['%s:%s' % (tags[device['vendor']], device['name'])
+                         for device in self._Devices])
+
+    def GetSize(self):
+        boxes = [self.GetTextExtent(device['name']) for device in self._Devices]
+        return wx.Size((max(box.GetWidth() for box in boxes)
+                        + DeviceListRenderer.CORNER_RADIUS*2),
+                       (sum(box.GetHeight() for box in boxes)
+                        + DeviceListRenderer.CORNER_RADIUS*2*len(boxes)
+                        + DeviceListRenderer.CORNER_RADIUS*(len(boxes) - 1)))
+
+    def Render(self, cell, dc, state):
+        position = cell.GetPosition()
+        for device in self._Devices:
+            box = self.GetTextExtent(device['name'])
+
+            if device['vendor'] == 'nvidia':
+                color = self._ColorDb.Find('LIME GREEN')
+            else:
+                color = self._ColorDb.Find('LIGHT GREY')
+            dc.SetBrush(wx.Brush(color))
+            dc.SetPen(wx.TRANSPARENT_PEN)
+            shadeRect = wx.Rect(
+                position,
+                wx.Size(box.GetWidth() + DeviceListRenderer.CORNER_RADIUS*2,
+                        box.GetHeight() + DeviceListRenderer.CORNER_RADIUS*2))
+            dc.DrawRoundedRectangle(shadeRect, DeviceListRenderer.CORNER_RADIUS)
+
+            textRect = wx.Rect(
+                wx.Point(position.x + DeviceListRenderer.CORNER_RADIUS,
+                         position.y + DeviceListRenderer.CORNER_RADIUS),
+                box)
+            self.RenderText(device['name'], 0, textRect, dc, state)
+
+            position = wx.Point(position.x,
+                                (position.y + box.GetHeight()
+                                 + DeviceListRenderer.CORNER_RADIUS*2
+                                 + DeviceListRenderer.CORNER_RADIUS))
+        return True
+
+    def _DeviceToString(device):
         if isinstance(device, NvidiaDevice):
             name = device.name
             name = name.replace('GeForce', '')
@@ -195,68 +254,6 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
             return 'N:%s' % name
         else:
             raise Exception('bad device instance')
-
-
-class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
-
-    CORNER_RADIUS = 5
-
-    def __init__(self, *args, **kwargs):
-        wx.dataview.DataViewCustomRenderer.__init__(self, *args, **kwargs)
-        self.devices = []
-        self._colordb = wx.ColourDatabase()
-
-    def SetValue(self, value):
-        vendors = {
-            'N': 'nvidia'
-            }
-        self.devices = [{ 'name': s[2:], 'vendor': vendors[s[0]] }
-                        for s in value.split(',')]
-        return True
-
-    def GetValue(self):
-        tags = {
-            'nvidia': 'N'
-            }
-        return ','.join(['%s:%s' % (tags[device['vendor']], device['name'])
-                         for device in self.devices])
-
-    def GetSize(self):
-        boxes = [self.GetTextExtent(device['name']) for device in self.devices]
-        return wx.Size((max(box.GetWidth() for box in boxes)
-                        + DeviceListRenderer.CORNER_RADIUS*2),
-                       (sum(box.GetHeight() for box in boxes)
-                        + DeviceListRenderer.CORNER_RADIUS*2*len(boxes)
-                        + DeviceListRenderer.CORNER_RADIUS*(len(boxes) - 1)))
-
-    def Render(self, cell, dc, state):
-        position = cell.GetPosition()
-        for device in self.devices:
-            box = self.GetTextExtent(device['name'])
-
-            if device['vendor'] == 'nvidia':
-                color = self._colordb.Find('LIME GREEN')
-            else:
-                color = self._colordb.Find('LIGHT GREY')
-            dc.SetBrush(wx.Brush(color))
-            dc.SetPen(wx.TRANSPARENT_PEN)
-            shade_rect = wx.Rect(
-                position,
-                wx.Size(box.GetWidth() + DeviceListRenderer.CORNER_RADIUS*2,
-                        box.GetHeight() + DeviceListRenderer.CORNER_RADIUS*2))
-            dc.DrawRoundedRectangle(shade_rect, DeviceListRenderer.CORNER_RADIUS)
-
-            text_rect = wx.Rect(
-                wx.Point(position.x + DeviceListRenderer.CORNER_RADIUS,
-                         position.y + DeviceListRenderer.CORNER_RADIUS),
-                box)
-            self.RenderText(device['name'], 0, text_rect, dc, state)
-
-            position = wx.Point(position.x,
-                                (position.y + box.GetHeight()
-                                 + DeviceListRenderer.CORNER_RADIUS*2
-                                 + DeviceListRenderer.CORNER_RADIUS))
-        return True
 
 
 class MiningThread(threading.Thread):

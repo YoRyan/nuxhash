@@ -17,171 +17,173 @@ class SettingsScreen(wx.Panel):
 
     def __init__(self, parent, *args, frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._new_settings = None
-        self._frame = frame
+        self._NewSettings = None
+        self._Frame = frame
         self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
         # Add basic setting controls.
-        basic_form = wx.Window(self)
-        sizer.Add(basic_form, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
-                                             .Expand())
-        basic_sizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
-        basic_sizer.AddGrowableCol(1)
-        basic_form.SetSizer(basic_sizer)
+        basicForm = wx.Window(self)
+        sizer.Add(basicForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+                                            .Expand())
+        basicSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
+        basicSizer.AddGrowableCol(1)
+        basicForm.SetSizer(basicSizer)
 
-        basic_sizer.Add(wx.StaticText(basic_form, label='Wallet address'),
-                        wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._wallet = wx.TextCtrl(basic_form, size=(-1, -1))
-        self.Bind(wx.EVT_TEXT, self.OnWalletChange, self._wallet)
-        basic_sizer.Add(self._wallet,
-                        wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
+        basicSizer.Add(wx.StaticText(basicForm, label='Wallet address'),
+                       wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._Wallet = wx.TextCtrl(basicForm, size=(-1, -1))
+        self.Bind(wx.EVT_TEXT, self.OnWalletChange, self._Wallet)
+        basicSizer.Add(
+            self._Wallet, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
 
-        basic_sizer.Add(wx.StaticText(basic_form, label='Worker name'),
-                        wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._worker = wx.TextCtrl(basic_form, size=(200, -1))
-        self.Bind(wx.EVT_TEXT, self.OnWorkerChange, self._worker)
-        basic_sizer.Add(self._worker,
-                        wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        basicSizer.Add(wx.StaticText(basicForm, label='Worker name'),
+                       wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._Worker = wx.TextCtrl(basicForm, size=(200, -1))
+        self.Bind(wx.EVT_TEXT, self.OnWorkerChange, self._Worker)
+        basicSizer.Add(
+            self._Worker, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        basic_sizer.Add(wx.StaticText(basic_form, label='Region'),
-                        wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._region = ChoiceByValue(
-            basic_form, choices=REGIONS,
-            fallback_choice=settings.DEFAULT_SETTINGS['nicehash']['region'])
-        self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self._region)
-        basic_sizer.Add(self._region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        basicSizer.Add(wx.StaticText(basicForm, label='Region'),
+                       wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._Region = ChoiceByValue(
+            basicForm, choices=REGIONS,
+            fallbackChoice=settings.DEFAULT_SETTINGS['nicehash']['region'])
+        self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self._Region)
+        basicSizer.Add(
+            self._Region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
         # Add divider.
         sizer.Add(wx.StaticLine(self), wx.SizerFlags().Expand())
 
         # Add advanced setting controls.
-        advanced_form = wx.Window(self)
-        sizer.Add(advanced_form, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
-                                                .Expand())
-        advanced_sizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
-        advanced_sizer.AddGrowableCol(1)
-        advanced_form.SetSizer(advanced_sizer)
+        advancedForm = wx.Window(self)
+        sizer.Add(advancedForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+                                               .Expand())
+        advancedSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
+        advancedSizer.AddGrowableCol(1)
+        advancedForm.SetSizer(advancedSizer)
 
-        advanced_sizer.Add(
-            wx.StaticText(advanced_form, label='Update interval (secs)'),
+        advancedSizer.Add(
+            wx.StaticText(advancedForm, label='Update interval (secs)'),
             wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._interval = wx.SpinCtrl(advanced_form, size=(125, -1),
+        self._Interval = wx.SpinCtrl(advancedForm, size=(125, -1),
                                      min=10, max=300, initial=60)
-        self.Bind(wx.EVT_SPINCTRL, self.OnIntervalChange, self._interval)
-        advanced_sizer.Add(self._interval,
-                           wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self.Bind(wx.EVT_SPINCTRL, self.OnIntervalChange, self._Interval)
+        advancedSizer.Add(
+            self._Interval, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        advanced_sizer.Add(
-            wx.StaticText(advanced_form, label='Profitability switch threshold (%)'),
+        advancedSizer.Add(
+            wx.StaticText(advancedForm, label='Profitability switch threshold (%)'),
             wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._threshold = wx.SpinCtrl(advanced_form, size=(125, -1),
+        self._Threshold = wx.SpinCtrl(advancedForm, size=(125, -1),
                                       min=1, max=50, initial=10)
-        self.Bind(wx.EVT_SPINCTRL, self.OnThresholdChange, self._threshold)
-        advanced_sizer.Add(self._threshold,
-                           wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self.Bind(wx.EVT_SPINCTRL, self.OnThresholdChange, self._Threshold)
+        advancedSizer.Add(
+            self._Threshold, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        advanced_sizer.Add(
-            wx.StaticText(advanced_form, label='Display units'),
+        advancedSizer.Add(
+            wx.StaticText(advancedForm, label='Display units'),
             wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._units = ChoiceByValue(
-            advanced_form, choices=UNITS,
-            fallback_choice=settings.DEFAULT_SETTINGS['gui']['units'])
-        self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self._units)
-        advanced_sizer.Add(self._units,
-                           wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._Units = ChoiceByValue(
+            advancedForm, choices=UNITS,
+            fallbackChoice=settings.DEFAULT_SETTINGS['gui']['units'])
+        self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self._Units)
+        advancedSizer.Add(
+            self._Units, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
         # Add spacer.
         sizer.AddStretchSpacer()
 
         # Add revert/save controls.
-        save_form = wx.Window(self)
-        sizer.Add(save_form, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
-                                            .Right())
-        save_sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        save_form.SetSizer(save_sizer)
+        saveForm = wx.Window(self)
+        sizer.Add(saveForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+                                           .Right())
+        saveSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        saveForm.SetSizer(saveSizer)
 
-        self._revert = wx.Button(save_form, id=wx.ID_REVERT_TO_SAVED)
-        self.Bind(wx.EVT_BUTTON, self.OnRevert, self._revert)
-        save_sizer.Add(self._revert)
+        self._Revert = wx.Button(saveForm, id=wx.ID_REVERT_TO_SAVED)
+        self.Bind(wx.EVT_BUTTON, self.OnRevert, self._Revert)
+        saveSizer.Add(self._Revert)
 
-        save_sizer.AddSpacer(main.PADDING_PX)
+        saveSizer.AddSpacer(main.PADDING_PX)
 
-        self._save = wx.Button(save_form, id=wx.ID_APPLY)
-        self.Bind(wx.EVT_BUTTON, self.OnSave, self._save)
-        save_sizer.Add(self._save)
+        self._Save = wx.Button(saveForm, id=wx.ID_APPLY)
+        self.Bind(wx.EVT_BUTTON, self.OnSave, self._Save)
+        saveSizer.Add(self._Save)
 
         # Initialize controls.
-        self._reset()
+        self._Reset()
 
     def OnNewSettings(self, event):
-        self._reset()
+        self._Reset()
 
-    def _reset(self):
-        settings = self._frame.settings
-        self._new_settings = deepcopy(settings)
-        self._revert.Disable()
-        self._save.Disable()
-        self._wallet.ChangeValue(settings['nicehash']['wallet'])
-        self._worker.ChangeValue(settings['nicehash']['workername'])
-        self._region.SetValue(settings['nicehash']['region'])
-        self._interval.SetValue(settings['switching']['interval'])
-        self._threshold.SetValue(settings['switching']['threshold']*100)
-        self._units.SetValue(settings['gui']['units'])
-
-    def _change_event(method):
+    def _ChangeEvent(method):
         @wraps(method)
         def wrapper(self, *args, **kwargs):
-            self._revert.Enable()
-            self._save.Enable()
+            self._Revert.Enable()
+            self._Save.Enable()
             method(self, *args, **kwargs)
         return wrapper
 
-    @_change_event
+    @_ChangeEvent
     def OnWalletChange(self, event):
-        self._new_settings['nicehash']['wallet'] = event.GetString()
+        self._NewSettings['nicehash']['wallet'] = event.GetString()
 
-    @_change_event
+    @_ChangeEvent
     def OnWorkerChange(self, event):
-        self._new_settings['nicehash']['workername'] = event.GetString()
+        self._NewSettings['nicehash']['workername'] = event.GetString()
 
-    @_change_event
+    @_ChangeEvent
     def OnRegionChange(self, event):
-        self._new_settings['nicehash']['region'] = REGIONS[event.GetSelection()]
+        self._NewSettings['nicehash']['region'] = REGIONS[event.GetSelection()]
 
-    @_change_event
+    @_ChangeEvent
     def OnIntervalChange(self, event):
-        self._new_settings['switching']['interval'] = event.GetPosition()
+        self._NewSettings['switching']['interval'] = event.GetPosition()
 
-    @_change_event
+    @_ChangeEvent
     def OnThresholdChange(self, event):
-        self._new_settings['switching']['threshold'] = event.GetPosition()/100.0
+        self._NewSettings['switching']['threshold'] = event.GetPosition()/100.0
 
-    @_change_event
+    @_ChangeEvent
     def OnUnitsChange(self, event):
-        self._new_settings['gui']['units'] = UNITS[event.GetSelection()]
+        self._NewSettings['gui']['units'] = UNITS[event.GetSelection()]
 
     def OnRevert(self, event):
-        self._reset()
+        self._Reset()
 
     def OnSave(self, event):
-        self._frame.settings = deepcopy(self._new_settings)
-        self._revert.Disable()
-        self._save.Disable()
+        self._Frame.Settings = deepcopy(self._NewSettings)
+        self._Revert.Disable()
+        self._Save.Disable()
+
+    def _Reset(self):
+        settings = self._Frame.Settings
+        self._NewSettings = deepcopy(settings)
+
+        self._Revert.Disable()
+        self._Save.Disable()
+        self._Wallet.ChangeValue(settings['nicehash']['wallet'])
+        self._Worker.ChangeValue(settings['nicehash']['workername'])
+        self._Region.SetValue(settings['nicehash']['region'])
+        self._Interval.SetValue(settings['switching']['interval'])
+        self._Threshold.SetValue(settings['switching']['threshold']*100)
+        self._Units.SetValue(settings['gui']['units'])
 
 
 class ChoiceByValue(wx.Choice):
 
-    def __init__(self, *args, choices=[], fallback_choice='', **kwargs):
+    def __init__(self, *args, choices=[], fallbackChoice='', **kwargs):
         wx.Choice.__init__(self, *args, choices=choices, **kwargs)
-        self._choices = choices
-        self._fallback = fallback_choice
+        self._Choices = choices
+        self._Fallback = fallbackChoice
 
     def SetValue(self, value):
-        if value in self._choices:
-            wx.Choice.SetSelection(self, self._choices.index(value))
+        if value in self._Choices:
+            wx.Choice.SetSelection(self, self._Choices.index(value))
         else:
-            wx.Choice.SetSelection(self, self._choices.index(self._fallback))
+            wx.Choice.SetSelection(self, self._Choices.index(self._Fallback))
 
