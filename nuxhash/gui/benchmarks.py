@@ -103,14 +103,15 @@ class BenchmarksScreen(wx.Panel):
 
             algorithms = [algorithm for algorithm in allAlgorithms
                           if algorithm.accepts(device)]
-            sizer = wx.FlexGridSizer(len(algorithms), 3, wx.Size(0, 0))
+            sizer = wx.FlexGridSizer(len(algorithms), 4, wx.Size(0, 0))
             pane.SetSizer(sizer, deleteOld=True)
-            sizer.AddGrowableCol(1)
+            sizer.AddGrowableCol(3)
             for algorithm in algorithms:
                 item = Item(pane, algorithm)
                 sizer.Add(item.checkbox)
-                sizer.Add(item.label)
-                sizer.Add(item.speeds)
+                sizer.Add(item.label, wx.SizerFlags().Expand())
+                sizer.AddSpacer(main.PADDING_PX)
+                sizer.Add(item.speeds, wx.SizerFlags().Expand())
                 self._Items[(device, algorithm)] = item
                 self._ResetSpeedCtrl(device, algorithm)
         self.Layout()
@@ -261,7 +262,11 @@ class Item(object):
     def __init__(self, parent, algorithm):
         self.checkbox = wx.CheckBox(parent)
         self.label = wx.StaticText(parent, label=algorithm.name)
+        self.label.Bind(wx.EVT_LEFT_UP, self._onclick)
         self.speeds = SpeedCtrl(parent)
+
+    def _onclick(self, event):
+        self.checkbox.SetValue(not self.checkbox.GetValue())
 
     def is_selected(self):
         return self.checkbox.GetValue()
@@ -278,7 +283,7 @@ class SpeedCtrl(wx.TextCtrl):
     def __init__(self, parent, *args, **kwargs):
         wx.StaticText.__init__(self, parent, *args,
                                style=wx.BORDER_NONE|wx.TE_CENTRE,
-                               size=(150, 20), **kwargs)
+                               size=(-1, 20), **kwargs)
         self._StatusPos = 0
         self.Bind(wx.EVT_KILL_FOCUS, self._OnUnfocus)
 
