@@ -44,18 +44,23 @@ class MainWindow(wx.Frame):
             AboutScreen(notebook),
             text='About')
 
-        # Read user data.
-        pub.subscribe(self._OnSettings, 'data.settings')
-        pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
-        pub.sendMessage(
-            'data.settings', settings=nuxhash.settings.load_settings(CONFIG_DIR))
-        pub.sendMessage(
-            'data.benchmarks',
-            benchmarks=nuxhash.settings.load_benchmarks(CONFIG_DIR, self._Devices))
-
+        # Check miner downloads.
         pub.subscribe(self._OnDownloadProgress, 'download.progress')
         self._DlThread = self._DlProgress = None
         self._DownloadMiners()
+
+        # Read user data.
+        pub.subscribe(self._OnSettings, 'data.settings')
+        pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
+
+        loaded_settings = nuxhash.settings.load_settings(CONFIG_DIR)
+        if loaded_settings == nuxhash.settings.DEFAULT_SETTINGS:
+            self._FirstRun()
+        pub.sendMessage('data.settings', settings=loaded_settings)
+
+        pub.sendMessage(
+            'data.benchmarks',
+            benchmarks=nuxhash.settings.load_benchmarks(CONFIG_DIR, self._Devices))
 
     def _DownloadMiners(self):
         to_download = [item for item in make_miners(CONFIG_DIR)
@@ -66,6 +71,14 @@ class MainWindow(wx.Frame):
             self._DlProgress = wx.ProgressDialog('nuxhash', '', parent=self)
             self._DlProgress.ShowModal()
             self._DlProgress.Destroy()
+
+    def _FirstRun(self):
+        dialog = wx.MessageDialog(
+            self,
+            'Welcome to nuxhash!\n\nSet your NiceHash wallet address and run '
+            'some benchmarks, and then you can start mining.',
+            style=wx.OK)
+        dialog.ShowModal()
 
     def _OnDownloadProgress(self, progress, message):
         if self._DlThread:
