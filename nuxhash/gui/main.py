@@ -8,6 +8,7 @@ from wx.lib.newevent import NewCommandEvent
 import nuxhash.settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.download.downloads import make_miners
+from nuxhash.gui.about import AboutScreen
 from nuxhash.gui.benchmarks import BenchmarksScreen
 from nuxhash.gui.mining import MiningScreen
 from nuxhash.gui.settings import SettingsScreen
@@ -30,17 +31,18 @@ class MainWindow(wx.Frame):
 
         # Create notebook and its pages.
         notebook = wx.Notebook(self)
-
-        self._MiningScreen = MiningScreen(
-            notebook, devices=self._Devices)
-        notebook.AddPage(self._MiningScreen, text='Mining')
-
-        self._BenchmarksScreen = BenchmarksScreen(
-            notebook, devices=self._Devices)
-        notebook.AddPage(self._BenchmarksScreen, text='Benchmarks')
-
-        self._SettingsScreen = SettingsScreen(notebook)
-        notebook.AddPage(self._SettingsScreen, text='Settings')
+        notebook.AddPage(
+            MiningScreen(notebook, devices=self._Devices),
+            text='Mining')
+        notebook.AddPage(
+            BenchmarksScreen(notebook, devices=self._Devices),
+            text='Benchmarks')
+        notebook.AddPage(
+            SettingsScreen(notebook),
+            text='Settings')
+        notebook.AddPage(
+            AboutScreen(notebook),
+            text='About')
 
         # Read user data.
         pub.subscribe(self._OnSettings, 'data.settings')

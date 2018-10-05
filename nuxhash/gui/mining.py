@@ -110,7 +110,8 @@ class MiningScreen(wx.Panel):
         self._UpdateMining()
 
     def _UpdateMining(self):
-        if (not self._Benchmarking
+        if (self._Benchmarks is not None
+            and not self._Benchmarking
             and check_bc(self._Settings['nicehash']['wallet'])
             and any(self._Benchmarks[device] != {} for device in self._Devices)):
             if self._Thread:
