@@ -2,7 +2,7 @@ from copy import deepcopy
 from functools import wraps
 
 import wx
-from wx.lib.newevent import NewCommandEvent
+from wx.lib.pubsub import pub
 
 from nuxhash import settings
 from nuxhash.gui import main
@@ -17,9 +17,9 @@ class SettingsScreen(wx.Panel):
 
     def __init__(self, parent, *args, frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
+        self._Settings = DEFAULT_SETTINGS
         self._NewSettings = None
-        self._Frame = frame
-        self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
+        pub.subscribe(self._OnSettings, 'data.settings')
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
@@ -114,11 +114,10 @@ class SettingsScreen(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnSave, self._Save)
         saveSizer.Add(self._Save)
 
-        # Initialize controls.
-        self._Reset()
-
-    def OnNewSettings(self, event):
-        self._Reset()
+    def _OnSettings(self, settings):
+        if settings != self._Settings:
+            self._Settings = settings
+            self._Reset()
 
     def _ChangeEvent(method):
         @wraps(method)
@@ -156,22 +155,21 @@ class SettingsScreen(wx.Panel):
         self._Reset()
 
     def OnSave(self, event):
-        self._Frame.Settings = deepcopy(self._NewSettings)
+        pub.sendMessage('data.settings', settings=deepcopy(self._NewSettings))
         self._Revert.Disable()
         self._Save.Disable()
 
     def _Reset(self):
-        settings = self._Frame.Settings
-        self._NewSettings = deepcopy(settings)
+        self._NewSettings = deepcopy(self._Settings)
 
         self._Revert.Disable()
         self._Save.Disable()
-        self._Wallet.ChangeValue(settings['nicehash']['wallet'])
-        self._Worker.ChangeValue(settings['nicehash']['workername'])
-        self._Region.SetValue(settings['nicehash']['region'])
-        self._Interval.SetValue(settings['switching']['interval'])
-        self._Threshold.SetValue(settings['switching']['threshold']*100)
-        self._Units.SetValue(settings['gui']['units'])
+        self._Wallet.ChangeValue(self._Settings['nicehash']['wallet'])
+        self._Worker.ChangeValue(self._Settings['nicehash']['workername'])
+        self._Region.SetValue(self._Settings['nicehash']['region'])
+        self._Interval.SetValue(self._Settings['switching']['interval'])
+        self._Threshold.SetValue(self._Settings['switching']['threshold']*100)
+        self._Units.SetValue(self._Settings['gui']['units'])
 
 
 class ChoiceByValue(wx.Choice):

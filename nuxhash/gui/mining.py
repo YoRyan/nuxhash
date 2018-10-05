@@ -9,7 +9,6 @@ from urllib.error import URLError
 
 import wx
 import wx.dataview
-from wx.lib.newevent import NewCommandEvent, NewEvent
 from wx.lib.pubsub import pub
 
 from nuxhash import nicehash, utils
@@ -25,40 +24,37 @@ MINING_UPDATE_SECS = 5
 BALANCE_UPDATE_MIN = 5
 NVIDIA_COLOR = (66, 244, 69)
 
-StartMiningEvent, EVT_START_MINING = NewCommandEvent()
-StopMiningEvent, EVT_STOP_MINING = NewCommandEvent()
-MiningStatusEvent, EVT_MINING_STATUS = NewEvent()
-NewBalanceEvent, EVT_BALANCE = NewEvent()
-
 
 class MiningScreen(wx.Panel):
 
-    def __init__(self, parent, *args, devices=[], frame=None, **kwargs):
+    def __init__(self, parent, *args, devices=[], **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._Thread = None
-        self._Frame = frame
         self._Devices = devices
+        self._Settings = DEFAULT_SETTINGS
+        self._Benchmarks = EMPTY_BENCHMARKS
 
-        self.Bind(main.EVT_SETTINGS, self.OnNewSettings)
-        self.Bind(main.EVT_BENCHMARKS, self.OnNewBenchmarks)
-        self.Bind(main.EVT_START_BENCHMARKS, self.OnStartBenchmarking)
-        self.Bind(main.EVT_STOP_BENCHMARKS, self.OnStopBenchmarking)
+        pub.subscribe(self._OnSettings, 'data.settings')
+        pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
+
+        pub.subscribe(self._OnStartBenchmarking, 'benchmarking.start')
+        pub.subscribe(self._OnStopBenchmarking, 'benchmarking.stop')
+
         pub.subscribe(self._OnClose, 'app.close')
 
-        self.Bind(EVT_BALANCE, self.OnNewBalance)
-        self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
+        pub.subscribe(self._OnNewBalance, 'nicehash.balance')
+        pub.subscribe(self._OnMiningStatus, 'mining.status')
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
         # Update balance periodically.
-        self.Bind(EVT_BALANCE, self.OnNewBalance)
         self._Timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, lambda event: self._UpdateBalance(), self._Timer)
         self._Timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
         # Add mining panel.
-        self._Panel = MiningPanel(self, frame=frame)
+        self._Panel = MiningPanel(self)
         sizer.Add(self._Panel, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
                                                       main.PADDING_PX)
                                               .Proportion(1.0)
@@ -93,82 +89,66 @@ class MiningScreen(wx.Panel):
                                                         .Center())
         self.Bind(wx.EVT_BUTTON, self.OnStartStop, self._StartStop)
 
-        self._UpdateBalance()
+    def _OnSettings(self, settings):
+        if settings != self._Settings:
+            self._Settings = settings
+            self._UpdateBalance()
 
-    def OnNewSettings(self, event):
-        self._UpdateBalance()
+    def _OnBenchmarks(self, benchmarks):
+        if benchmarks != self._Benchmarks:
+            self._Benchmarks = benchmarks
 
-    def OnNewBenchmarks(self, event):
-        pass
-
-    def OnStartBenchmarking(self, event):
+    def _OnStartBenchmarking(self):
         self._StartStop.Disable()
 
-    def OnStopBenchmarking(self, event):
+    def _OnStopBenchmarking(self):
         self._StartStop.Enable()
 
     def _OnClose(self):
         if self._Thread:
-            self._StopThread()
+            self._Thread.stop()
+            self._Thread.join()
 
     def _UpdateBalance(self):
-        address = self._Frame.Settings['nicehash']['wallet']
+        address = self._Settings['nicehash']['wallet']
         def request(address, target):
             balance = unpaid_balance(address)
-            wx.PostEvent(target, NewBalanceEvent(balance=balance))
+            main.sendMessage(target, 'nicehash.balance', balance=balance)
         thread = threading.Thread(target=request, args=(address, self))
         thread.start()
 
     def OnStartStop(self, event):
-        if self._Thread:
-            wx.PostEvent(self._Panel, StopMiningEvent(id=wx.ID_ANY))
-            wx.PostEvent(self._Frame, main.StopMiningEvent(id=wx.ID_ANY))
-
+        if not self._Thread:
+            pub.sendMessage('mining.start')
+            self._StartStop.SetLabel('Stop Mining')
+            self._Thread = MiningThread(devices=self._Devices,
+                                        window=self,
+                                        settings=deepcopy(self._Settings),
+                                        benchmarks=deepcopy(self._Benchmarks))
+            self._Thread.start()
+        else:
+            pub.sendMessage('mining.stop')
             self._Revenue.SetLabel('')
             self._StartStop.SetLabel('Start Mining')
-
-            self._StopThread()
-        else:
-            wx.PostEvent(self._Panel, StartMiningEvent(id=wx.ID_ANY))
-            wx.PostEvent(self._Frame, main.StartMiningEvent(id=wx.ID_ANY))
-
-            self._StartStop.SetLabel('Stop Mining')
-
-            self._StartThread()
-
-    def _StartThread(self):
-        if not self._Thread:
-            self._Thread = MiningThread(
-                devices=self._Devices, window=self,
-                settings=deepcopy(self._Frame.Settings),
-                benchmarks=deepcopy(self._Frame.Benchmarks))
-            self._Thread.start()
-
-    def _StopThread(self):
-        if self._Thread:
             self._Thread.stop()
             self._Thread.join()
             self._Thread = None
 
-    def OnNewBalance(self, event):
-        unit = self._Frame.Settings['gui']['units']
-        self._Balance.SetLabel(utils.format_balance(event.balance, unit))
+    def _OnNewBalance(self, balance):
+        unit = self._Settings['gui']['units']
+        self._Balance.SetLabel(utils.format_balance(balance, unit))
 
-    def OnMiningStatus(self, event):
-        totalRevenue = sum(event.revenue.values())
-        unit = self._Frame.Settings['gui']['units']
+    def _OnMiningStatus(self, speeds, revenue, devices):
+        totalRevenue = sum(revenue.values())
+        unit = self._Settings['gui']['units']
         self._Revenue.SetLabel(utils.format_balance(totalRevenue, unit))
-        wx.PostEvent(self._Panel, event)
 
 
 class MiningPanel(wx.dataview.DataViewListCtrl):
 
-    def __init__(self, parent, *args, frame=None, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
-        self._Frame = frame
-        self.Bind(EVT_START_MINING, self.OnStartMining)
-        self.Bind(EVT_STOP_MINING, self.OnStopMining)
-        self.Bind(EVT_MINING_STATUS, self.OnMiningStatus)
+        self._Settings = DEFAULT_SETTINGS
         self.Disable()
         self.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendColumn(
@@ -179,26 +159,35 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
         self.AppendTextColumn('Speed', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendTextColumn('Revenue')
 
-    def OnStartMining(self, event):
+        pub.subscribe(self._OnSettings, 'data.settings')
+        pub.subscribe(self._OnStartMining, 'mining.start')
+        pub.subscribe(self._OnStopMining, 'mining.stop')
+        pub.subscribe(self._OnMiningStatus, 'mining.status')
+
+    def _OnSettings(self, settings):
+        if settings != self._Settings:
+            self._Settings = settings
+
+    def _OnStartMining(self):
         self.Enable()
 
-    def OnStopMining(self, event):
+    def _OnStopMining(self):
         self.Disable()
         self.DeleteAllItems()
 
-    def OnMiningStatus(self, event):
+    def _OnMiningStatus(self, speeds, revenue, devices):
         self.DeleteAllItems()
-        algorithms = list(event.speeds.keys())
+        algorithms = list(speeds.keys())
         algorithms.sort(key=lambda algorithm: algorithm.name)
         for algorithm in algorithms:
             algo = '%s\n(%s)' % (algorithm.name, ', '.join(algorithm.algorithms))
-            devices = ','.join([DeviceListRenderer._DeviceToString(device)
-                                for device in event.devices[algorithm]])
+            devicesStr = ','.join([DeviceListRenderer._DeviceToString(device)
+                                   for device in devices[algorithm]])
             speed = ',\n'.join([utils.format_speed(speed)
-                                for speed in event.speeds[algorithm]])
-            revenue = utils.format_balance(event.revenue[algorithm],
-                                           self._Frame.Settings['gui']['units'])
-            self.AppendItem([algo, devices, speed, revenue])
+                                for speed in speeds[algorithm]])
+            pay = utils.format_balance(
+                revenue[algorithm], self._Settings['gui']['units'])
+            self.AppendItem([algo, devicesStr, speed, pay])
 
 
 class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
@@ -320,8 +309,7 @@ class MiningThread(threading.Thread):
     def _switch_algos(self):
         # Get profitability information from NiceHash.
         try:
-            payrates, stratums = nicehash.simplemultialgo_info(
-                self._settings)
+            payrates, stratums = nicehash.simplemultialgo_info(self._settings)
         except (socket.error, socket.timeout, SSLError, URLError) as err:
             logging.warning('NiceHash stats: %s' % err)
         except nicehash.BadResponseError:
@@ -374,9 +362,8 @@ class MiningThread(threading.Thread):
                                in self._assignments.items()
                                if this_algorithm == algorithm]
                    for algorithm in running_algorithms}
-        wx.PostEvent(self._window,
-                     MiningStatusEvent(speeds=speeds, revenue=revenue,
-                                       devices=devices))
+        main.sendMessage(self._window, 'mining.status',
+                         speeds=speeds, revenue=revenue, devices=devices)
         self._scheduler.enter(MINING_UPDATE_SECS, MiningThread.STATUS_PRIORITY,
                               self._read_status)
 

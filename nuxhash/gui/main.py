@@ -1,10 +1,10 @@
 import logging
 
 import wx
-from wx.lib.newevent import NewCommandEvent, NewEvent
 from wx.lib.pubsub import pub
+from wx.lib.newevent import NewCommandEvent
 
-from nuxhash import settings
+import nuxhash.settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.gui.benchmarks import BenchmarksScreen
 from nuxhash.gui.mining import MiningScreen
@@ -12,15 +12,9 @@ from nuxhash.gui.settings import SettingsScreen
 
 
 PADDING_PX = 10
-CONFIG_DIR = settings.DEFAULT_CONFIGDIR
+CONFIG_DIR = nuxhash.settings.DEFAULT_CONFIGDIR
 
-StartMiningEvent, EVT_START_MINING = NewCommandEvent()
-StopMiningEvent, EVT_STOP_MINING = NewCommandEvent()
-StartBenchmarkingEvent, EVT_START_BENCHMARKS = NewCommandEvent()
-StopBenchmarkingEvent, EVT_STOP_BENCHMARKS = NewCommandEvent()
-
-NewBenchmarksEvent, EVT_BENCHMARKS = NewEvent()
-NewSettingsEvent, EVT_SETTINGS = NewEvent()
+PubSubSendEvent, EVT_PUBSUB = NewCommandEvent()
 
 
 class MainWindow(wx.Frame):
@@ -29,73 +23,55 @@ class MainWindow(wx.Frame):
         wx.Frame.__init__(self, parent, *args, **kwargs)
         self.SetSizeHints(minW=500, minH=500)
         self._Devices = self._ProbeDevices()
-        self._Settings = settings.load_settings(CONFIG_DIR)
-        self._Benchmarks = settings.load_benchmarks(CONFIG_DIR, self._Devices)
-        self.Bind(EVT_START_MINING, self.OnStartMining)
-        self.Bind(EVT_STOP_MINING, self.OnStopMining)
-        self.Bind(EVT_START_BENCHMARKS, self.OnStartBenchmarking)
-        self.Bind(EVT_STOP_BENCHMARKS, self.OnStopBenchmarking)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(EVT_PUBSUB, self.OnPubSend)
 
         # Create notebook and its pages.
         notebook = wx.Notebook(self)
 
         self._MiningScreen = MiningScreen(
-            notebook, devices=self._Devices, frame=self)
+            notebook, devices=self._Devices)
         notebook.AddPage(self._MiningScreen, text='Mining')
 
         self._BenchmarksScreen = BenchmarksScreen(
-            notebook, devices=self._Devices, frame=self)
+            notebook, devices=self._Devices)
         notebook.AddPage(self._BenchmarksScreen, text='Benchmarks')
 
-        self._SettingsScreen = SettingsScreen(notebook, frame=self)
+        self._SettingsScreen = SettingsScreen(notebook)
         notebook.AddPage(self._SettingsScreen, text='Settings')
 
-        self._Screens = [self._MiningScreen,
-                         self._BenchmarksScreen,
-                         self._SettingsScreen]
-
-    def OnStartMining(self, event):
-        wx.PostEvent(self._BenchmarksScreen, event)
-
-    def OnStopMining(self, event):
-        wx.PostEvent(self._BenchmarksScreen, event)
-
-    def OnStartBenchmarking(self, event):
-        wx.PostEvent(self._MiningScreen, event)
-
-    def OnStopBenchmarking(self, event):
-        wx.PostEvent(self._MiningScreen, event)
+        # Read user data.
+        pub.sendMessage(
+            'data.settings', settings=nuxhash.settings.load_settings(CONFIG_DIR))
+        pub.sendMessage(
+            'data.benchmarks',
+            benchmarks=nuxhash.settings.load_benchmarks(CONFIG_DIR, self._Devices))
+        pub.subscribe(self._OnSettings, 'data.settings')
+        pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
 
     def OnClose(self, event):
         logging.info('Closing up!')
         pub.sendMessage('app.close')
         event.Skip()
 
-    @property
-    def Benchmarks(self):
-        return self._Benchmarks
-    @Benchmarks.setter
-    def Benchmarks(self, value):
-        self._Benchmarks = value
-        logging.info('Saving user benchmarks.')
-        settings.save_benchmarks(CONFIG_DIR, self._Benchmarks)
-        for screen in self._Screens:
-            wx.PostEvent(screen, NewBenchmarksEvent())
+    def OnPubSend(self, event):
+        pub.sendMessage(event.topic, **event.data)
 
-    @property
-    def Settings(self):
-        return self._Settings
-    @Settings.setter
-    def Settings(self, value):
-        self._Settings = value
+    def _OnSettings(self, settings):
         logging.info('Saving user settings.')
-        settings.save_settings(CONFIG_DIR, self._Settings)
-        for screen in self._Screens:
-            wx.PostEvent(screen, NewSettingsEvent())
+        nuxhash.settings.save_settings(CONFIG_DIR, settings)
+
+    def _OnBenchmarks(self, benchmarks):
+        logging.info('Saving user benchmarks.')
+        nuxhash.settings.save_benchmarks(CONFIG_DIR, benchmarks)
 
     def _ProbeDevices(self):
         return nvidia_devices()
+
+
+def sendMessage(window, topic, **data):
+    """Like pub.sendMessage(), except safely callable by other threads."""
+    wx.PostEvent(window, PubSubSendEvent(topic=topic, data=data, id=wx.ID_ANY))
 
 
 def main():
