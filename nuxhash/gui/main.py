@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import wx
 from wx.lib.pubsub import pub
@@ -6,6 +7,7 @@ from wx.lib.newevent import NewCommandEvent
 
 import nuxhash.settings
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
+from nuxhash.download.downloads import make_miners
 from nuxhash.gui.benchmarks import BenchmarksScreen
 from nuxhash.gui.mining import MiningScreen
 from nuxhash.gui.settings import SettingsScreen
@@ -49,6 +51,29 @@ class MainWindow(wx.Frame):
         pub.subscribe(self._OnSettings, 'data.settings')
         pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
 
+        pub.subscribe(self._OnDownloadProgress, 'download.progress')
+        self._DlThread = self._DlProgress = None
+        self._DownloadMiners()
+
+    def _DownloadMiners(self):
+        to_download = [item for item in make_miners(CONFIG_DIR)
+                       if not item.verify()]
+        if len(to_download) > 0:
+            self._DlThread = DownloadThread(self, to_download)
+            self._DlThread.start()
+            self._DlProgress = wx.ProgressDialog('nuxhash', '', parent=self)
+            self._DlProgress.ShowModal()
+            self._DlProgress.Destroy()
+
+    def _OnDownloadProgress(self, progress, message):
+        if self._DlThread:
+            if progress > 0.99: # Avoid precision errors.
+                self._DlProgress.Update(100.0)
+                self._DlThread.join()
+                self._DlThread = None
+            else:
+                self._DlProgress.Update(progress*100, newmsg=message)
+
     def OnClose(self, event):
         logging.info('Closing up!')
         pub.sendMessage('app.close')
@@ -67,6 +92,25 @@ class MainWindow(wx.Frame):
 
     def _ProbeDevices(self):
         return nvidia_devices()
+
+
+class DownloadThread(threading.Thread):
+
+    def __init__(self, frame, downloads, *args, **kwargs):
+        threading.Thread.__init__(self, *args, **kwargs)
+        self._frame = frame
+        self._downloads = downloads
+
+    def run(self):
+        n_downloads = len(self._downloads)
+        for i, item in enumerate(self._downloads):
+            sendMessage(
+                self._frame, 'download.progress',
+                progress=i/n_downloads, message='Downloading %s' % item.name)
+            item.download()
+            sendMessage(
+                self._frame, 'download.progress',
+                progress=(i+1)/n_downloads, message='')
 
 
 def sendMessage(window, topic, **data):
