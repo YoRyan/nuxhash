@@ -164,14 +164,14 @@ class SettingsScreen(wx.Panel):
     def _Reset(self):
         self._NewSettings = deepcopy(self._Settings)
 
-        self._Revert.Disable()
-        self._Save.Disable()
         self._Wallet.SetValue(self._Settings['nicehash']['wallet'])
         self._Worker.SetValue(self._Settings['nicehash']['workername'])
         self._Region.SetValue(self._Settings['nicehash']['region'])
         self._Interval.SetValue(self._Settings['switching']['interval'])
         self._Threshold.SetValue(self._Settings['switching']['threshold']*100)
         self._Units.SetValue(self._Settings['gui']['units'])
+        self._Revert.Disable()
+        self._Save.Disable()
 
 
 class ChoiceByValue(wx.Choice):
