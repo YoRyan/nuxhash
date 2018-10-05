@@ -94,10 +94,25 @@ class MiningScreen(wx.Panel):
         if settings != self._Settings:
             self._Settings = settings
             self._UpdateBalance()
+            self._ApplySettings()
 
     def _OnBenchmarks(self, benchmarks):
         if benchmarks != self._Benchmarks:
             self._Benchmarks = benchmarks
+            self._ApplySettings()
+
+    def _ApplySettings(self):
+        if (check_bc(self._Settings['nicehash']['wallet'])
+            and any(self._Benchmarks[device] != {} for device in self._Devices)):
+            if self._Thread:
+                # TODO: Update mining thread more gracefully?
+                self._StopMining()
+                self._StartMining()
+            self._StartStop.Enable()
+        else:
+            if self._Thread:
+                self._StopMining()
+            self._StartStop.Disable()
 
     def _OnStartBenchmarking(self):
         self._StartStop.Disable()
@@ -108,7 +123,6 @@ class MiningScreen(wx.Panel):
     def _OnClose(self):
         if self._Thread:
             self._Thread.stop()
-            self._Thread.join()
 
     def _UpdateBalance(self):
         address = self._Settings['nicehash']['wallet']
@@ -120,20 +134,25 @@ class MiningScreen(wx.Panel):
 
     def OnStartStop(self, event):
         if not self._Thread:
-            pub.sendMessage('mining.start')
-            self._StartStop.SetLabel('Stop Mining')
-            self._Thread = MiningThread(devices=self._Devices,
-                                        window=self,
-                                        settings=deepcopy(self._Settings),
-                                        benchmarks=deepcopy(self._Benchmarks))
-            self._Thread.start()
+            self._StartMining()
         else:
-            pub.sendMessage('mining.stop')
-            self._Revenue.SetLabel('')
-            self._StartStop.SetLabel('Start Mining')
-            self._Thread.stop()
-            self._Thread.join()
-            self._Thread = None
+            self._StopMining()
+
+    def _StartMining(self):
+        pub.sendMessage('mining.start')
+        self._StartStop.SetLabel('Stop Mining')
+        self._Thread = MiningThread(devices=self._Devices,
+                                    window=self,
+                                    settings=deepcopy(self._Settings),
+                                    benchmarks=deepcopy(self._Benchmarks))
+        self._Thread.start()
+
+    def _StopMining(self):
+        pub.sendMessage('mining.stop')
+        self._Revenue.SetLabel('')
+        self._StartStop.SetLabel('Start Mining')
+        self._Thread.stop()
+        self._Thread = None
 
     def _OnNewBalance(self, balance):
         unit = self._Settings['gui']['units']
@@ -306,6 +325,7 @@ class MiningThread(threading.Thread):
     def stop(self):
         self._scheduler.enter(0, MiningThread.STOP_PRIORITY, self._stop_mining)
         self._stop_signal.set()
+        self.join()
 
     def _switch_algos(self):
         # Get profitability information from NiceHash.
