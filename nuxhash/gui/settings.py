@@ -5,12 +5,14 @@ import wx
 from wx.lib.pubsub import pub
 
 from nuxhash import settings
+from nuxhash.bitcoin import check_bc
 from nuxhash.gui import main
 from nuxhash.settings import DEFAULT_SETTINGS
 
 
 REGIONS = ['eu', 'usa', 'jp', 'hk']
 UNITS = ['BTC', 'mBTC']
+INVALID_COLOR = 'PINK'
 
 
 class SettingsScreen(wx.Panel):
@@ -34,7 +36,7 @@ class SettingsScreen(wx.Panel):
 
         basicSizer.Add(wx.StaticText(basicForm, label='Wallet address'),
                        wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._Wallet = wx.TextCtrl(basicForm, size=(-1, -1))
+        self._Wallet = AddressCtrl(basicForm, size=(-1, -1))
         self.Bind(wx.EVT_TEXT, self.OnWalletChange, self._Wallet)
         basicSizer.Add(
             self._Wallet, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
@@ -164,8 +166,8 @@ class SettingsScreen(wx.Panel):
 
         self._Revert.Disable()
         self._Save.Disable()
-        self._Wallet.ChangeValue(self._Settings['nicehash']['wallet'])
-        self._Worker.ChangeValue(self._Settings['nicehash']['workername'])
+        self._Wallet.SetValue(self._Settings['nicehash']['wallet'])
+        self._Worker.SetValue(self._Settings['nicehash']['workername'])
         self._Region.SetValue(self._Settings['nicehash']['region'])
         self._Interval.SetValue(self._Settings['switching']['interval'])
         self._Threshold.SetValue(self._Settings['switching']['threshold']*100)
@@ -184,4 +186,19 @@ class ChoiceByValue(wx.Choice):
             wx.Choice.SetSelection(self, self._Choices.index(value))
         else:
             wx.Choice.SetSelection(self, self._Choices.index(self._Fallback))
+
+
+class AddressCtrl(wx.TextCtrl):
+
+    def __init__(self, parent, *args, **kwargs):
+        wx.StaticText.__init__(self, parent, *args, **kwargs)
+        self.Bind(wx.EVT_TEXT, self._OnSetValue)
+
+    def _OnSetValue(self, event):
+        if not check_bc(self.GetValue()):
+            self.SetBackgroundColour(INVALID_COLOR)
+        else:
+            self.SetBackgroundColour(
+                wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        event.Skip()
 

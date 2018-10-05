@@ -12,6 +12,7 @@ import wx.dataview
 from wx.lib.pubsub import pub
 
 from nuxhash import nicehash, utils
+from nuxhash.bitcoin import check_bc
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners.excavator import Excavator
