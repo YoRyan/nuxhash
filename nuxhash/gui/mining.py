@@ -125,11 +125,14 @@ class MiningScreen(wx.Panel):
 
     def _UpdateBalance(self):
         address = self._Settings['nicehash']['wallet']
-        def request(address, target):
-            balance = unpaid_balance(address)
-            main.sendMessage(target, 'nicehash.balance', balance=balance)
-        thread = threading.Thread(target=request, args=(address, self))
-        thread.start()
+        if check_bc(address):
+            def request(address, target):
+                balance = unpaid_balance(address)
+                main.sendMessage(target, 'nicehash.balance', balance=balance)
+            thread = threading.Thread(target=request, args=(address, self))
+            thread.start()
+        else:
+            pub.sendMessage('nicehash.balance', balance=None)
 
     def OnStartStop(self, event):
         if not self._Thread:
@@ -154,8 +157,11 @@ class MiningScreen(wx.Panel):
         self._Thread = None
 
     def _OnNewBalance(self, balance):
-        unit = self._Settings['gui']['units']
-        self._Balance.SetLabel(utils.format_balance(balance, unit))
+        if balance is None:
+            self._Balance.SetLabel('')
+        else:
+            unit = self._Settings['gui']['units']
+            self._Balance.SetLabel(utils.format_balance(balance, unit))
 
     def _OnMiningStatus(self, speeds, revenue, devices):
         totalRevenue = sum(revenue.values())
