@@ -250,7 +250,6 @@ class BenchmarkThread(threading.Thread):
         self._settings = settings
         self._miners = miners
         self._abort = threading.Event()
-        self._status_queue = Queue()
 
     def run(self):
         for miner in self._miners:
@@ -278,9 +277,6 @@ class BenchmarkThread(threading.Thread):
 
     def stop(self):
         self._abort.set()
-
-    def enqueue(self):
-        return 
 
 
 class Item(object):
