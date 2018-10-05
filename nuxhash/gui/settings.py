@@ -19,7 +19,7 @@ class SettingsScreen(wx.Panel):
 
     def __init__(self, parent, *args, frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self._Settings = DEFAULT_SETTINGS
+        self._Settings = None
         self._NewSettings = None
         pub.subscribe(self._OnSettings, 'data.settings')
 

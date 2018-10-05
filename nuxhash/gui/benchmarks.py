@@ -11,7 +11,7 @@ from nuxhash import utils
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners import all_miners
-from nuxhash.settings import DEFAULT_SETTINGS, EMPTY_BENCHMARKS
+from nuxhash.settings import DEFAULT_SETTINGS
 
 
 BENCHMARK_SECS = 60
@@ -24,10 +24,8 @@ class BenchmarksScreen(wx.Panel):
     def __init__(self, parent, *args, devices=[], **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._Devices = devices
-        self._Settings = DEFAULT_SETTINGS
-        self._Benchmarks = EMPTY_BENCHMARKS
-        self._Miners = [miner(main.CONFIG_DIR, DEFAULT_SETTINGS)
-                        for miner in all_miners]
+        self._Settings = self._Benchmarks = None
+        self._Miners = []
         # dict of (device, algorithm) -> Item
         self._Items = {}
         self._Thread = None
@@ -216,12 +214,13 @@ class BenchmarksScreen(wx.Panel):
             self._ResetSpeedCtrl(device, algorithm)
 
     def _ResetSpeedCtrl(self, device, algorithm):
-        benchmarks = self._Benchmarks[device]
         item = self._Items[(device, algorithm)]
-        if algorithm.name in benchmarks:
-            item.speeds.SetValues(benchmarks[algorithm.name])
+        blank = [0.0]*len(algorithm.algorithms)
+        if self._Benchmarks is None:
+            item.speeds.SetValues(blank)
         else:
-            item.speeds.SetValues([0.0]*len(algorithm.algorithms))
+            benchmarks = self._Benchmarks[device]
+            item.speeds.SetValues(benchmarks.get(algorithm.name, blank))
 
     @property
     def _Selection(self):

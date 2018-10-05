@@ -43,13 +43,13 @@ class MainWindow(wx.Frame):
         notebook.AddPage(self._SettingsScreen, text='Settings')
 
         # Read user data.
+        pub.subscribe(self._OnSettings, 'data.settings')
+        pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
         pub.sendMessage(
             'data.settings', settings=nuxhash.settings.load_settings(CONFIG_DIR))
         pub.sendMessage(
             'data.benchmarks',
             benchmarks=nuxhash.settings.load_benchmarks(CONFIG_DIR, self._Devices))
-        pub.subscribe(self._OnSettings, 'data.settings')
-        pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
 
         pub.subscribe(self._OnDownloadProgress, 'download.progress')
         self._DlThread = self._DlProgress = None

@@ -32,8 +32,7 @@ class MiningScreen(wx.Panel):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._Thread = None
         self._Devices = devices
-        self._Settings = DEFAULT_SETTINGS
-        self._Benchmarks = EMPTY_BENCHMARKS
+        self._Settings = self._Benchmarks = None
 
         pub.subscribe(self._OnSettings, 'data.settings')
         pub.subscribe(self._OnBenchmarks, 'data.benchmarks')
@@ -168,7 +167,7 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
 
     def __init__(self, parent, *args, **kwargs):
         wx.dataview.DataViewListCtrl.__init__(self, parent, *args, **kwargs)
-        self._Settings = DEFAULT_SETTINGS
+        self._Settings = None
         self.Disable()
         self.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendColumn(
