@@ -59,14 +59,15 @@ class BenchmarksScreen(wx.Panel):
         innerWindow.SetSizer(innerSizer)
 
         # Populate it with a collapsible panel for each device.
-        self._DevicePanes = {}
+        self._DeviceCp = {}
         for device in self._Devices:
             deviceCp = wx.CollapsiblePane(
-                innerWindow, label=('%s\n%s' % (device.name, device.uuid)))
+                innerWindow, label=('%s\n%s' % (device.name, device.uuid)),
+                style=wx.CP_NO_TLW_RESIZE)
             self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged,
                       deviceCp)
             innerSizer.Add(deviceCp, wx.SizerFlags().Expand())
-            self._DevicePanes[device] = deviceCp.GetPane()
+            self._DeviceCp[device] = deviceCp
 
         bottomSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         sizer.Add(bottomSizer, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
@@ -94,7 +95,8 @@ class BenchmarksScreen(wx.Panel):
             self._Settings = settings
             self._Miners = [miner(main.CONFIG_DIR, self._Settings)
                             for miner in all_miners]
-            self._Repopulate()
+            if self._Benchmarks is not None:
+                self._Repopulate()
 
     def _OnBenchmarks(self, benchmarks):
         if benchmarks != self._Benchmarks:
@@ -116,7 +118,8 @@ class BenchmarksScreen(wx.Panel):
         allAlgorithms = sum([miner.algorithms for miner in self._Miners], [])
         self._Items = {}
         for device in self._Devices:
-            pane = self._DevicePanes[device]
+            cp = self._DeviceCp[device]
+            pane = cp.GetPane()
             oldSizer = pane.GetSizer()
             if oldSizer:
                 oldSizer.Clear(True)
@@ -134,12 +137,17 @@ class BenchmarksScreen(wx.Panel):
                 sizer.Add(item.speeds, wx.SizerFlags().Expand())
                 self._Items[(device, algorithm)] = item
                 self._ResetSpeedCtrl(device, algorithm)
+            cp.Expand()
+        self._SelectUnmeasured()
         self.Layout()
 
-    def OnSelectUnmeasured(self, event):
+    def _SelectUnmeasured(self):
         self._Selection = (
             [(device, algorithm) for (device, algorithm) in self._Items.keys()
              if algorithm.name not in self._Benchmarks[device]])
+
+    def OnSelectUnmeasured(self, event):
+        self._SelectUnmeasured()
 
     def OnSelectNone(self, event):
         self._Selection = []
@@ -215,12 +223,9 @@ class BenchmarksScreen(wx.Panel):
 
     def _ResetSpeedCtrl(self, device, algorithm):
         item = self._Items[(device, algorithm)]
-        blank = [0.0]*len(algorithm.algorithms)
-        if self._Benchmarks is None:
-            item.speeds.SetValues(blank)
-        else:
-            benchmarks = self._Benchmarks[device]
-            item.speeds.SetValues(benchmarks.get(algorithm.name, blank))
+        benchmarks = self._Benchmarks[device]
+        item.speeds.SetValues(
+            benchmarks.get(algorithm.name, [0.0]*len(algorithm.algorithms)))
 
     @property
     def _Selection(self):
