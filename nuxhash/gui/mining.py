@@ -31,6 +31,7 @@ class MiningScreen(wx.Panel):
     def __init__(self, parent, *args, devices=[], **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._Thread = None
+        self._Benchmarking = False
         self._Devices = devices
         self._Settings = self._Benchmarks = None
 
@@ -93,15 +94,24 @@ class MiningScreen(wx.Panel):
         if settings != self._Settings:
             self._Settings = settings
             self._UpdateBalance()
-            self._ApplySettings()
+            self._UpdateMining()
 
     def _OnBenchmarks(self, benchmarks):
         if benchmarks != self._Benchmarks:
             self._Benchmarks = benchmarks
-            self._ApplySettings()
+            self._UpdateMining()
 
-    def _ApplySettings(self):
-        if (check_bc(self._Settings['nicehash']['wallet'])
+    def _OnStartBenchmarking(self):
+        self._Benchmarking = True
+        self._UpdateMining()
+
+    def _OnStopBenchmarking(self):
+        self._Benchmarking = False
+        self._UpdateMining()
+
+    def _UpdateMining(self):
+        if (not self._Benchmarking
+            and check_bc(self._Settings['nicehash']['wallet'])
             and any(self._Benchmarks[device] != {} for device in self._Devices)):
             if self._Thread:
                 # TODO: Update mining thread more gracefully?
@@ -112,12 +122,6 @@ class MiningScreen(wx.Panel):
             if self._Thread:
                 self._StopMining()
             self._StartStop.Disable()
-
-    def _OnStartBenchmarking(self):
-        self._StartStop.Disable()
-
-    def _OnStopBenchmarking(self):
-        self._StartStop.Enable()
 
     def _OnClose(self):
         if self._Thread:
