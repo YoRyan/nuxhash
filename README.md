@@ -4,6 +4,8 @@ nuxhash is a [NiceHash](https://nicehash.com) cryptocurrency mining client for
 Linux. nuxhash consists of a headless daemon and an optional wxPython-based GUI.
 It is currently in beta.
 
+Donations: bc1q2ne5zqa6k5egd82p4rv0rn44tpc35gv3afu52n
+
 ## Features
 
 - Miner downloader
@@ -30,8 +32,8 @@ Optionally, install this to enable the GUI interface:
 Then, install nuxhash.
 
 ```
-sudo apt install python3-pip
-sudo pip3 install git+https://github.com/YoRyan/nuxhash
+$ sudo apt install python3-pip
+$ sudo pip3 install git+https://github.com/YoRyan/nuxhash
 ```
 
 To start the daemon, run `nuxhashd`. To start the graphical interface, run `nuxhash-gui`.
