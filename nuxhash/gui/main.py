@@ -1,5 +1,7 @@
 import logging
+import os
 import threading
+from pathlib import Path
 
 import wx
 from wx.lib.pubsub import pub
@@ -16,6 +18,7 @@ from nuxhash.gui.settings import SettingsScreen
 
 PADDING_PX = 10
 CONFIG_DIR = nuxhash.settings.DEFAULT_CONFIGDIR
+ICON_PATH = Path(os.path.dirname(__file__))/'icons'/'nuxhash.svg'
 
 PubSubSendEvent, EVT_PUBSUB = NewCommandEvent()
 
@@ -24,6 +27,7 @@ class MainWindow(wx.Frame):
 
     def __init__(self, parent, *args, **kwargs):
         wx.Frame.__init__(self, parent, *args, **kwargs)
+        self.SetIcon(wx.Icon(wx.IconLocation(str(ICON_PATH))))
         self.SetSizeHints(minW=500, minH=500)
         self._Devices = self._ProbeDevices()
         self.Bind(wx.EVT_CLOSE, self.OnClose)

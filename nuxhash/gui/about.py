@@ -1,9 +1,14 @@
+import os
+from pathlib import Path
+
 import wx
 from wx.lib.agw.hyperlink import HyperLinkCtrl
 
 
 WEBSITE = 'https://github.com/YoRyan/nuxhash'
 LICENSE = 'https://www.gnu.org/licenses/gpl-3.0.html'
+
+LOGO_PATH = Path(os.path.dirname(__file__))/'icons'/'nuxhash_128x128.png'
 
 
 class AboutScreen(wx.Panel):
@@ -15,6 +20,12 @@ class AboutScreen(wx.Panel):
         v_sizer = wx.BoxSizer(orient=wx.VERTICAL)
         h_sizer.Add(v_sizer, wx.SizerFlags().Proportion(1.0)
                                             .Align(wx.ALIGN_CENTER))
+
+        logo = wx.Image(open(LOGO_PATH, 'rb'), type=wx.BITMAP_TYPE_PNG)
+        v_sizer.Add(wx.StaticBitmap(self, bitmap=wx.Bitmap(logo)),
+                    wx.SizerFlags().Align(wx.ALIGN_CENTER))
+
+        v_sizer.AddSpacer(15)
 
         appName = wx.StaticText(self, label='nuxhash', style=wx.ALIGN_CENTER)
         appName.SetFont(self.GetFont().Scale(2.5))
