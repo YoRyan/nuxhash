@@ -4,6 +4,8 @@ from pathlib import Path
 import wx
 from wx.lib.agw.hyperlink import HyperLinkCtrl
 
+from nuxhash.version import __version__
+
 
 WEBSITE = 'https://github.com/YoRyan/nuxhash'
 LICENSE = 'https://www.gnu.org/licenses/gpl-3.0.html'
@@ -27,8 +29,9 @@ class AboutScreen(wx.Panel):
 
         v_sizer.AddSpacer(15)
 
-        appName = wx.StaticText(self, label='nuxhash', style=wx.ALIGN_CENTER)
-        appName.SetFont(self.GetFont().Scale(2.5))
+        appName = wx.StaticText(self, label='nuxhash %s' % __version__,
+                                style=wx.ALIGN_CENTER)
+        appName.SetFont(self.GetFont().Scale(2.0))
         v_sizer.Add(appName, wx.SizerFlags().Expand())
 
         v_sizer.AddSpacer(15)
