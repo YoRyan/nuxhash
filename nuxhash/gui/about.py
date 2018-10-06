@@ -23,7 +23,8 @@ class AboutScreen(wx.Panel):
         h_sizer.Add(v_sizer, wx.SizerFlags().Proportion(1.0)
                                             .Align(wx.ALIGN_CENTER))
 
-        logo = wx.Image(open(LOGO_PATH, 'rb'), type=wx.BITMAP_TYPE_PNG)
+        with open(LOGO_PATH, 'rb') as f:
+            logo = wx.Image(f, type=wx.BITMAP_TYPE_PNG)
         v_sizer.Add(wx.StaticBitmap(self, bitmap=wx.Bitmap(logo)),
                     wx.SizerFlags().Align(wx.ALIGN_CENTER))
 
