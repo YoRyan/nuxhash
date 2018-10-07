@@ -20,6 +20,7 @@ from nuxhash.download.downloads import make_miners
 from nuxhash.miners.excavator import Excavator
 from nuxhash.miners.miner import MinerNotRunning
 from nuxhash.switching.naive import NaiveSwitcher
+from nuxhash.version import __version__
 
 
 BENCHMARK_SECS = 60
@@ -45,8 +46,14 @@ def main():
         '-c', '--configdir', nargs=1, default=[settings.DEFAULT_CONFIGDIR],
         help=('directory for configuration and benchmark files'
               + ' (default: ~/.config/nuxhash/)'))
+    argp.add_argument('--version', action='store_true',
+                      help='show nuxhash version')
     args = argp.parse_args()
     config_dir = Path(args.configdir[0])
+
+    if args.version:
+        print('nuxhash daemon %s' % __version__)
+        return
 
     if args.show_mining:
         log_level = logging.DEBUG
