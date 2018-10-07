@@ -7,6 +7,7 @@ from time import sleep
 
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.miners import miner
+from nuxhash.utils import get_port
 
 
 ALGORITHMS = [
@@ -29,6 +30,7 @@ ALGORITHMS = [
     'lyra2z',
     'x16r'
     ]
+NHMP_PORT = 3200
 
 
 class ExcavatorError(Exception):
@@ -48,51 +50,66 @@ class ExcavatorServer(object):
     BUFFER_SIZE = 1024
     TIMEOUT = 10
 
-    def __init__(self, executable, port, region, auth):
-        self.executable = executable
-        self.address = ('127.0.0.1', port)
-        self.region = region
-        self.auth = auth
-        self.process = None
+    def __init__(self, executable):
+        self._executable = executable
+        self._region = self._auth = self._process = None
         # dict of algorithm name -> ESAlgorithm
-        self.running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
-                                   for algorithm in ALGORITHMS}
+        self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
+                                    for algorithm in ALGORITHMS}
         # dict of PCI bus id -> device id
-        self.device_map = {}
+        self._device_map = {}
         # dict of (algorithm name, Device instance) -> excavator worker id
-        self.running_workers = {}
+        self._running_workers = {}
+
+    @property
+    def settings(self):
+        return None
+    @settings.setter
+    def settings(self, v):
+        self._region = v['nicehash']['region']
+        self._auth = '%s.%s:x' % (v['nicehash']['wallet'],
+                                  v['nicehash']['workername'])
+        if self._process is not None:
+            # As of API 0.1.8, this changes strata but leaves all workers running.
+            self._subscribe()
 
     def start(self):
         """Launches excavator."""
-        self.process = subprocess.Popen([self.executable,
-                                         '-i', self.address[0],
-                                         '-p', str(self.address[1])],
-                                        stdin=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        stdout=subprocess.PIPE,
-                                        preexec_fn=os.setpgrp) # don't forward signals
-        self.process.stdin.close()
+
+        assert self._region is not None and self._auth is not None
+        self._address = ('127.0.0.1', get_port())
+
+        # Start process.
+        self._process = subprocess.Popen(
+            [self._executable, '-i', self._address[0], '-p', str(self._address[1])],
+            stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+            preexec_fn=os.setpgrp) # Don't forward signals.
+        self._process.stdin.close()
+
         # Send stdout to logger.
-        log_thread = threading.Thread(target=miner.log_output, args=(self.process,))
+        log_thread = threading.Thread(
+            target=miner.log_output, args=(self._process,))
         log_thread.start()
 
+        # Wait for startup.
         while not self._test_connection():
-            if self.process.poll() is None:
+            if self._process.poll() is None:
                 sleep(1)
             else:
                 raise miner.MinerStartFailed
 
-        # Connect to NiceHash.
-        self.send_command('subscribe',
-                          ['nhmp.%s.nicehash.com:3200' % self.region, self.auth])
-
-        # Read excavator's device topology.
         self._read_devices()
+        self._subscribe()
 
         # Add back previously running workers.
-        for key, worker_id in self.running_workers.items():
+        for key, worker_id in self._running_workers.items():
             algorithm, device = key
             self.start_work(algorithm, device)
+
+    def _subscribe(self):
+        self.send_command(
+            'subscribe', ['nhmp.%s.nicehash.com:%s' % (self._region, NHMP_PORT),
+                          self._auth])
 
     def restart(self):
         """Restarts excavator."""
@@ -101,7 +118,7 @@ class ExcavatorServer(object):
 
     def stop(self):
         """Stops excavator."""
-        if self.process is None or self.process.poll() is not None:
+        if self._process is None or self._process.poll() is not None:
             return
 
         # Disconnect from NiceHash.
@@ -109,12 +126,15 @@ class ExcavatorServer(object):
 
         # Send the quit command, but don't read a response.
         js_data = json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n'
-        with socket.create_connection(self.address, self.TIMEOUT) as s:
+        with socket.create_connection(self._address, self.TIMEOUT) as s:
             s.sendall(js_data.encode('ascii'))
 
-        # Wait for the process to exit.
-        self.process.wait()
-        self.stdout = None
+        self._process.wait()
+
+    def is_running(self):
+        return (self._process is not None
+                and self._process.poll() is None
+                and self._test_connection())
 
     def send_command(self, method, params):
         """Sends a command to excavator, returns the JSON-encoded response.
@@ -130,7 +150,7 @@ class ExcavatorServer(object):
             }
         js_data = json.dumps(command).replace('\n', '\\n') + '\n'
         response = ''
-        with socket.create_connection(self.address, self.TIMEOUT) as s:
+        with socket.create_connection(self._address, self.TIMEOUT) as s:
             s.sendall(js_data.encode('ascii'))
             while True:
                 chunk = s.recv(self.BUFFER_SIZE).decode()
@@ -159,37 +179,37 @@ class ExcavatorServer(object):
         response = self.send_command('device.list', [])
         bus_to_idx = {device_data['details']['bus_id']: device_data['device_id']
                       for device_data in response['devices']}
-        self.device_map = bus_to_idx
+        self._device_map = bus_to_idx
 
     def start_work(self, algorithm, device, benchmarking=False):
         """Start running algorithm on device."""
         # Create associated algorithm(s).
         for multialgorithm in algorithm.split('_'):
-            algorithm_instance = self.running_algorithms[multialgorithm]
+            algorithm_instance = self._running_algorithms[multialgorithm]
             algorithm_instance.set_benchmarking(benchmarking)
             algorithm_instance.grab()
 
         # Create worker.
-        device_id = self.device_map[device.pci_bus]
+        device_id = self._device_map[device.pci_bus]
         response = self.send_command('worker.add', [algorithm, device_id])
-        self.running_workers[(algorithm, device)] = response['worker_id']
+        self._running_workers[(algorithm, device)] = response['worker_id']
 
     def stop_work(self, algorithm, device):
         """Stop running algorithm on device."""
         # Destroy worker.
-        worker_id = self.running_workers[(algorithm, device)]
+        worker_id = self._running_workers[(algorithm, device)]
         self.send_command('worker.free', [str(worker_id)])
-        self.running_workers.pop((algorithm, device))
+        self._running_workers.pop((algorithm, device))
 
         # Destroy associated algorithm(s) if no longer used.
         for multialgorithm in algorithm.split('_'):
-            self.running_algorithms[multialgorithm].release()
+            self._running_algorithms[multialgorithm].release()
 
     def device_speeds(self, device):
         """Report the speeds of all algorithms running on device."""
         response = self.send_command('worker.list', [])
         # NOTE: assumes 1:1 mapping of workers to devices
-        device_id = self.device_map[device.pci_bus]
+        device_id = self._device_map[device.pci_bus]
         data = next(worker for worker in response['workers']
                     if worker['device_id'] == device_id)
         return {algorithm['name']: algorithm['speed']
@@ -310,19 +330,13 @@ class ExcavatorAlgorithm(miner.Algorithm):
 
 class Excavator(miner.Miner):
 
-    def __init__(self, config_dir, settings):
-        miner.Miner.__init__(self, config_dir, settings)
+    def __init__(self, config_dir):
+        miner.Miner.__init__(self, config_dir)
         for algorithm in ALGORITHMS:
             runnable = ExcavatorAlgorithm(self, algorithm,
                                           warmup_secs=miner.SHORT_WARMUP_SECS)
             self.algorithms.append(runnable)
-        executable = config_dir/'excavator'/'excavator'
-        auth = '%s.%s:x' % (self.settings['nicehash']['wallet'],
-                            self.settings['nicehash']['workername'])
-        self.server = ExcavatorServer(executable,
-                                      self.settings['excavator']['port'],
-                                      self.settings['nicehash']['region'],
-                                      auth)
+        self.server = ExcavatorServer(config_dir/'excavator'/'excavator')
 
     def load(self):
         self.server.start()
@@ -334,9 +348,10 @@ class Excavator(miner.Miner):
         self.server.restart()
 
     def is_running(self):
-        if (self.server.process is not None
-            and self.server.process.poll() is None):
-            return self.server._test_connection()
-        else:
-            return False
+        return self.server.is_running()
+
+    @miner.Miner.settings.setter
+    def settings(self, v):
+        miner.Miner.settings.setter(v)
+        self.server.settings = v
 

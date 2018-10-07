@@ -15,7 +15,7 @@ from nuxhash import nicehash, utils
 from nuxhash.bitcoin import check_bc
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
-from nuxhash.miners.excavator import Excavator
+from nuxhash.miners import all_miners
 from nuxhash.nicehash import unpaid_balance
 from nuxhash.settings import DEFAULT_SETTINGS, EMPTY_BENCHMARKS
 from nuxhash.switching.naive import NaiveSwitcher
@@ -319,8 +319,9 @@ class MiningThread(threading.Thread):
                     self._settings)
             except (socket.error, socket.timeout, SSLError, URLError):
                 time.sleep(5)
-        self._miners = [Excavator(main.CONFIG_DIR, self._settings)]
+        self._miners = [miner(main.CONFIG_DIR) for miner in all_miners]
         for miner in self._miners:
+            miner.settings = self._settings
             miner.stratums = stratums
         self._algorithms = sum([miner.algorithms for miner in self._miners], [])
 

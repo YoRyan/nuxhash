@@ -17,7 +17,7 @@ from nuxhash import nicehash, settings, utils
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.download.downloads import make_miners
-from nuxhash.miners.excavator import Excavator
+from nuxhash.miners import all_miners
 from nuxhash.miners.miner import MinerNotRunning
 from nuxhash.switching.naive import NaiveSwitcher
 from nuxhash.version import __version__
@@ -81,7 +81,9 @@ def main():
         if not d.verify():
             logging.info('Downloading %s' % d.name)
             d.download()
-    nx_miners = [Excavator(config_dir, nx_settings)]
+    nx_miners = [miner(config_dir) for miner in all_miners]
+    for miner in nx_miners:
+        miner.settings = nx_settings
 
     # Select code path(s), benchmarks and/or mining.
     if args.benchmark_all:

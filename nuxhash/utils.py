@@ -1,8 +1,7 @@
+import socket
 from contextlib import contextmanager
 from threading import Event
 from time import sleep
-
-from nuxhash.miners.miner import MinerNotRunning
 
 
 def format_speed(s):
@@ -60,6 +59,7 @@ def run_benchmark(
                     will return average of already taken samples
     """
     SAMPLE_INTERVAL = 1
+    BLANK = [0.0]*len(algorithm.algorithms)
     assert algorithm.accepts(device)
 
     @contextmanager
@@ -74,7 +74,7 @@ def run_benchmark(
         i = 0
         while i < warmup_duration//SAMPLE_INTERVAL and not abort_signal.is_set():
             if not running_algo.parent.is_running():
-                raise MinerNotRunning
+                return BLANK
             sample = running_algo.current_speeds()
             sample_callback(sample, i*SAMPLE_INTERVAL - warmup_duration)
             abort_signal.wait(SAMPLE_INTERVAL)
@@ -85,7 +85,7 @@ def run_benchmark(
         i = 0
         while i < sample_duration//SAMPLE_INTERVAL and not abort_signal.is_set():
             if not running_algo.parent.is_running():
-                raise MinerNotRunning
+                return BLANK
             sample = running_algo.current_speeds()
             samples.append(sample)
             sample_callback(sample, sample_duration - i*SAMPLE_INTERVAL)
@@ -100,5 +100,11 @@ def run_benchmark(
                 sums[i] += e
         return sums
     return (list(map(lambda total: total/len(samples), sum_list_elements(samples)))
-            if len(samples) > 0 else [0.0]*len(algorithm.algorithms))
+            if len(samples) > 0 else BLANK)
+
+def get_port():
+    with socket.socket() as s:
+        s.bind(('', 0))
+        # This is a race condition, but probably a minor one.
+        return s.getsockname()[1]
 

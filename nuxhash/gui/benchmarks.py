@@ -25,7 +25,7 @@ class BenchmarksScreen(wx.Panel):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._Devices = devices
         self._Settings = self._Benchmarks = None
-        self._Miners = []
+        self._Miners = [miner(main.CONFIG_DIR) for miner in all_miners]
         # dict of (device, algorithm) -> Item
         self._Items = {}
         self._Thread = None
@@ -93,8 +93,8 @@ class BenchmarksScreen(wx.Panel):
     def _OnSettings(self, settings):
         if settings != self._Settings:
             self._Settings = settings
-            self._Miners = [miner(main.CONFIG_DIR, self._Settings)
-                            for miner in all_miners]
+            for miner in self._Miners:
+                miner.settings = settings
             if self._Benchmarks is not None:
                 self._Repopulate()
 
@@ -110,7 +110,7 @@ class BenchmarksScreen(wx.Panel):
         self._Benchmark.Enable()
 
     def _OnClose(self):
-        if self._Thread:
+        if self._ThreadRunning():
             self._Thread.stop()
             self._Thread.join()
 
@@ -154,7 +154,8 @@ class BenchmarksScreen(wx.Panel):
 
     def OnBenchmark(self, event):
         selection = self._Selection
-        if not self._Thread and len(selection) > 0:
+        running = self._ThreadRunning()
+        if not running and len(selection) > 0:
             self._SelectTodo.Disable()
             self._SelectNone.Disable()
             for item in self._Items.values():
@@ -167,7 +168,7 @@ class BenchmarksScreen(wx.Panel):
                 selection, window=self,
                 settings=self._Settings, miners=self._Miners)
             self._Thread.start()
-        elif self._Thread:
+        elif running:
             self._Thread.stop()
             self._Thread.join()
 
@@ -226,6 +227,9 @@ class BenchmarksScreen(wx.Panel):
         benchmarks = self._Benchmarks[device]
         item.speeds.SetValues(
             benchmarks.get(algorithm.name, [0.0]*len(algorithm.algorithms)))
+
+    def _ThreadRunning(self):
+        return self._Thread is not None
 
     @property
     def _Selection(self):

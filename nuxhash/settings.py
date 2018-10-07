@@ -14,10 +14,6 @@ DEFAULT_SETTINGS = {
         'workername': 'nuxhash',
         'region': 'usa',
         },
-    'excavator': {
-        'enabled': True,
-        'port': 3456
-        },
     'switching': {
         'interval': 60,
         'threshold': 0.1
@@ -42,10 +38,6 @@ def read_settings_from_file(fd):
             'wallet': get_option(parser.get, 'nicehash', 'wallet'),
             'workername': get_option(parser.get, 'nicehash', 'workername'),
             'region': get_option(parser.get, 'nicehash', 'region')
-            },
-        'excavator': {
-            'enabled': get_option(parser.getboolean, 'excavator', 'enabled'),
-            'port': get_option(parser.getint, 'excavator', 'port')
             },
         'switching': {
             'interval': get_option(parser.getint, 'switching', 'interval'),

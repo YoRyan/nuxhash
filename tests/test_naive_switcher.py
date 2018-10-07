@@ -15,7 +15,7 @@ class TestNaiveSwitcher(TestCase):
 
         self.devices = tests.get_test_devices()
         self.benchmarks = tests.get_test_benchmarks()
-        self.miner = Excavator(Path('/'), settings)
+        self.miner = Excavator(Path('/'))
         self.equihash = next(a for a in self.miner.algorithms
                              if a.algorithms == ['equihash'])
         self.neoscrypt = next(a for a in self.miner.algorithms

@@ -24,15 +24,15 @@ class MinerNotResponding(MinerException):
 
 class Miner(object):
 
-    def __init__(self, config_dir, settings):
+    def __init__(self, config_dir):
         # list of runnable algorithms supplied by this miner
         self.algorithms = []
         # configuration directory, for accessing downloaded miners
         self.config_dir = config_dir
         # current state of settings
-        self.settings = settings
-        # dict of algorithm name -> nicehash stratum uri; set later
-        self.stratums = {}
+        self._settings = None
+        # dict of algorithm name -> nicehash stratum uri
+        self._stratums = {}
 
     def load(self):
         """Initialize the mining program if necessary (e.g. start a server)."""
@@ -49,6 +49,22 @@ class Miner(object):
     def is_running(self):
         """Probe if the miner is operational."""
         pass
+
+    @property
+    def settings(self):
+        return self._settings
+    @settings.setter
+    def settings(self, v):
+        """Change settings during runtime."""
+        self._settings = v
+
+    @property
+    def stratums(self):
+        return self._stratums
+    @stratums.setter
+    def stratums(self, v):
+        """Change pools during runtime."""
+        self._stratums = v
 
 
 class Algorithm(object):
