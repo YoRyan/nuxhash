@@ -55,7 +55,7 @@ class MiningScreen(wx.Panel):
         self._Timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
         # Add mining panel.
-        self._Panel = MiningPanel(self)
+        self._Panel = MiningPanel(self, style=wx.dataview.DV_HORIZ_RULES)
         sizer.Add(self._Panel, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
                                                       main.PADDING_PX)
                                               .Proportion(1.0)
