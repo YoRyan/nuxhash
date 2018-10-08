@@ -75,7 +75,7 @@ class ExcavatorServer(object):
 
     def start(self):
         """Launches excavator."""
-
+        assert self._process is None
         assert self._region is not None and self._auth is not None
         self._address = ('127.0.0.1', get_port())
 
@@ -111,15 +111,9 @@ class ExcavatorServer(object):
             'subscribe', ['nhmp.%s.nicehash.com:%s' % (self._region, NHMP_PORT),
                           self._auth])
 
-    def restart(self):
-        """Restarts excavator."""
-        self.stop()
-        self.start()
-
     def stop(self):
         """Stops excavator."""
-        if self._process is None or self._process.poll() is not None:
-            return
+        assert self._process is not None and self._process.poll() is None
 
         # Disconnect from NiceHash.
         self.send_command('unsubscribe', [])
@@ -130,6 +124,7 @@ class ExcavatorServer(object):
             s.sendall(js_data.encode('ascii'))
 
         self._process.wait()
+        self._process = None
 
     def is_running(self):
         return (self._process is not None
@@ -343,9 +338,6 @@ class Excavator(miner.Miner):
 
     def unload(self):
         self.server.stop()
-
-    def reload(self):
-        self.server.restart()
 
     def is_running(self):
         return self.server.is_running()

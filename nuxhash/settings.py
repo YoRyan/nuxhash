@@ -20,6 +20,9 @@ DEFAULT_SETTINGS = {
         },
     'gui': {
         'units': 'mBTC'
+        },
+    'donate': {
+        'optout': False
         }
     }
 EMPTY_BENCHMARKS = defaultdict(lambda: {})
@@ -45,6 +48,9 @@ def read_settings_from_file(fd):
             },
         'gui': {
             'units': get_option(parser.get, 'gui', 'units')
+            },
+        'donate': {
+            'optout': get_option(parser.getboolean, 'donate', 'optout')
             }
         }
 

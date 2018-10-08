@@ -4,6 +4,7 @@ import threading
 import time
 from copy import deepcopy
 from datetime import datetime
+from random import random
 from ssl import SSLError
 from urllib.error import URLError
 
@@ -24,6 +25,8 @@ from nuxhash.switching.naive import NaiveSwitcher
 MINING_UPDATE_SECS = 5
 BALANCE_UPDATE_MIN = 5
 NVIDIA_COLOR = (66, 244, 69)
+DONATE_PROB = 0.005
+DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
 
 
 class MiningScreen(wx.Panel):
@@ -339,6 +342,8 @@ class MiningThread(threading.Thread):
         self.join()
 
     def _switch_algos(self):
+        interval = self._settings['switching']['interval']
+
         # Get profitability information from NiceHash.
         try:
             payrates, stratums = nicehash.simplemultialgo_info(self._settings)
@@ -372,8 +377,23 @@ class MiningThread(threading.Thread):
                             if algorithm == this_algorithm]
             this_algorithm.set_devices(this_devices)
 
-        self._scheduler.enter(self._settings['switching']['interval'],
-                              MiningThread.PROFIT_PRIORITY, self._switch_algos)
+        # Donation time.
+        if not self._settings['donate']['optout'] and random() < DONATE_PROB:
+            logging.warning('This interval will be donation time.')
+            donate_settings = deepcopy(self._settings)
+            donate_settings['nicehash']['wallet'] = DONATE_ADDRESS
+            donate_settings['nicehash']['workername'] = 'nuxhash'
+            for miner in self._miners:
+                miner.settings = donate_settings
+            self._scheduler.enter(interval, MiningSession.PROFIT_PRIORITY,
+                                  self._reset_miners)
+
+        self._scheduler.enter(interval, MiningThread.PROFIT_PRIORITY,
+                              self._switch_algos)
+
+    def _reset_miners(self):
+        for miner in self._miners:
+            miner.settings = self._settings
 
     def _read_status(self):
         running_algorithms = self._assignments.values()

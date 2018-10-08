@@ -42,10 +42,6 @@ class Miner(object):
         """Clean up after load()."""
         pass
 
-    def reload(self):
-        """Restart the miner in the event of an unusual condition (crash)."""
-        pass
-
     def is_running(self):
         """Probe if the miner is operational."""
         pass
@@ -108,7 +104,7 @@ def needs_miner_running(method):
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         if not self.parent.is_running():
-            self.parent.reload()
+            self.parent.load()
         return method(self, *args, **kwargs)
     return wrapper
 

@@ -7,8 +7,10 @@ import signal
 import socket
 import sys
 import time
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from random import random
 from ssl import SSLError
 from threading import Event
 from urllib.error import URLError
@@ -24,6 +26,8 @@ from nuxhash.version import __version__
 
 
 BENCHMARK_SECS = 60
+DONATE_PROB = 0.005
+DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
 
 
 def main():
@@ -228,6 +232,7 @@ class MiningSession(object):
                 self._last_payrates = (payrates, datetime.now())
         for miner in self._miners:
             miner.stratums = stratums
+            miner.load()
         self._algorithms = sum([miner.algorithms for miner in self._miners], [])
 
         # Initialize profit-switching.
@@ -246,6 +251,8 @@ class MiningSession(object):
         self._quit_signal.set()
 
     def _switch_algos(self):
+        interval = self._settings['switching']['interval']
+
         # Get profitability information from NiceHash.
         try:
             payrates, stratums = nicehash.simplemultialgo_info(self._settings)
@@ -278,8 +285,23 @@ class MiningSession(object):
                             if algorithm == this_algorithm]
             this_algorithm.set_devices(this_devices)
 
-        self._scheduler.enter(self._settings['switching']['interval'],
-                              MiningSession.PROFIT_PRIORITY, self._switch_algos)
+        # Donation time.
+        if not self._settings['donate']['optout'] and random() < DONATE_PROB:
+            logging.warning('This interval will be donation time.')
+            donate_settings = deepcopy(self._settings)
+            donate_settings['nicehash']['wallet'] = DONATE_ADDRESS
+            donate_settings['nicehash']['workername'] = 'nuxhash'
+            for miner in self._miners:
+                miner.settings = donate_settings
+            self._scheduler.enter(interval, MiningSession.PROFIT_PRIORITY,
+                                  self._reset_miners)
+
+        self._scheduler.enter(interval, MiningSession.PROFIT_PRIORITY,
+                              self._switch_algos)
+
+    def _reset_miners(self):
+        for miner in self._miners:
+            miner.settings = self._settings
 
     def _watch_algos(self):
         running_algorithms = self._assignments.values()
