@@ -16,6 +16,7 @@ from threading import Event
 from urllib.error import URLError
 
 from nuxhash import nicehash, settings, utils
+from nuxhash.bitcoin import check_bc
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.download.downloads import make_miners
@@ -110,9 +111,19 @@ def main():
 
 def initial_setup():
     print('nuxhashd initial setup')
-    wallet = input('Wallet address: ')
+
+    wallet = ''
+    while not check_bc(wallet):
+        wallet = input('Wallet address: ')
+
     workername = input('Worker name: ')
-    region = input('Region (eu/usa/hk/jp/in/br): ')
+    if workername == '':
+        workername = 'nuxhash'
+
+    region = ''
+    while region not in ['eu', 'usa', 'hk', 'jp', 'in', 'br']:
+        region = input('Region (eu/usa/hk/jp/in/br): ')
+
     print()
     return wallet, workername, region
 
