@@ -16,6 +16,21 @@ Donations: bc1q2ne5zqa6k5egd82p4rv0rn44tpc35gv3afu52n
 
 ![GUI screenshot](https://raw.githubusercontent.com/wiki/YoRyan/nuxhash/gui_alpha.png)
 
+```
+nuxhashd initial setup
+Wallet address: 3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23
+Worker name: nuxhash
+Region (eu/usa/hk/jp/in/br): usa
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   617    0   617    0     0   1402      0 --:--:-- --:--:-- --:--:--  1402
+100 5618k  100 5618k    0     0  1283k      0  0:00:04  0:00:04 --:--:-- 1554k
+
+CUDA device: GeForce GTX 1060 6GB (GPU-452679f3-ba2b-2cfe-4aff-5a50c4a32efb)
+  excavator_equihash  .  287.41  H/s (warming up, 23 s)
+```
+
 ## Quick Start
 
 Install the following dependencies (this list is for Ubuntu 18.04 LTS):
