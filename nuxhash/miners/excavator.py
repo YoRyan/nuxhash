@@ -53,6 +53,7 @@ class ExcavatorServer(object):
     def __init__(self, executable):
         self._executable = executable
         self._region = self._auth = self._process = None
+        self._address = ('127.0.0.1', get_port())
         # dict of algorithm name -> ESAlgorithm
         self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
                                     for algorithm in ALGORITHMS}
@@ -69,6 +70,14 @@ class ExcavatorServer(object):
         self._region = v['nicehash']['region']
         self._auth = '%s.%s:x' % (v['nicehash']['wallet'],
                                   v['nicehash']['workername'])
+
+        # NOTE: Will break if the address is changed while excavator is running.
+        if v['excavator_miner']['listen'] == '':
+            self._address = ('127.0.0.1', get_port())
+        else:
+            ip, port = v['excavator_miner']['listen'].split(':')
+            self._address = (ip, port)
+
         if self._process is not None:
             # As of API 0.1.8, this changes strata but leaves all workers running.
             self._subscribe()
@@ -77,7 +86,6 @@ class ExcavatorServer(object):
         """Launches excavator."""
         assert self._process is None
         assert self._region is not None and self._auth is not None
-        self._address = ('127.0.0.1', get_port())
 
         # Start process.
         self._process = subprocess.Popen(

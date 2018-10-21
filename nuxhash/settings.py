@@ -23,6 +23,9 @@ DEFAULT_SETTINGS = {
         },
     'donate': {
         'optout': False
+        },
+    'excavator_miner': {
+        'listen': ''
         }
     }
 EMPTY_BENCHMARKS = defaultdict(lambda: {})
@@ -51,6 +54,9 @@ def read_settings_from_file(fd):
             },
         'donate': {
             'optout': get_option(parser.getboolean, 'donate', 'optout')
+            },
+        'excavator_miner': {
+            'listen': get_option(parser.get, 'excavator_miner', 'listen')
             }
         }
 
