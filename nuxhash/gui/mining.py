@@ -397,12 +397,6 @@ class MiningThread(threading.Thread):
 
     def _read_status(self):
         running_algorithms = self._assignments.values()
-        # Check miner status.
-        for algorithm in running_algorithms:
-            if not algorithm.parent.is_running():
-                logging.error('Detected %s crash, restarting miner'
-                              % algorithm.name)
-                algorithm.parent.reload()
         speeds = {algorithm: algorithm.current_speeds()
                   for algorithm in running_algorithms}
         revenue = {algorithm: sum([self._current_payrates[multialgorithm]

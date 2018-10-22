@@ -84,7 +84,6 @@ class ExcavatorServer(object):
 
     def start(self):
         """Launches excavator."""
-        assert self._process is None
         assert self._region is not None and self._auth is not None
 
         # Start process.
@@ -121,8 +120,6 @@ class ExcavatorServer(object):
 
     def stop(self):
         """Stops excavator."""
-        assert self._process is not None and self._process.poll() is None
-
         # Disconnect from NiceHash.
         self.send_command('unsubscribe', [])
 
@@ -132,7 +129,6 @@ class ExcavatorServer(object):
             s.sendall(js_data.encode('ascii'))
 
         self._process.wait()
-        self._process = None
 
     def is_running(self):
         return (self._process is not None

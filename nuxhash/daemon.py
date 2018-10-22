@@ -214,9 +214,7 @@ def list_devices(nx_devices):
 class MiningSession(object):
 
     PROFIT_PRIORITY = 1
-    WATCH_PRIORITY = 2
     STOP_PRIORITY = 0
-    WATCH_INTERVAL = 15
 
     def __init__(self, miners, settings, benchmarks, devices):
         self._miners = miners
@@ -254,7 +252,6 @@ class MiningSession(object):
         signal.signal(signal.SIGINT, lambda signum, frame: self.stop())
 
         self._scheduler.enter(0, MiningSession.PROFIT_PRIORITY, self._switch_algos)
-        self._scheduler.enter(0, MiningSession.WATCH_PRIORITY, self._watch_algos)
         self._scheduler.run()
 
     def stop(self):
@@ -313,16 +310,6 @@ class MiningSession(object):
     def _reset_miners(self):
         for miner in self._miners:
             miner.settings = self._settings
-
-    def _watch_algos(self):
-        running_algorithms = self._assignments.values()
-        for algorithm in running_algorithms:
-            if not algorithm.parent.is_running():
-                logging.error('Detected %s crash, restarting miner'
-                              % algorithm.name)
-                algorithm.parent.reload()
-        self._scheduler.enter(MiningSession.WATCH_INTERVAL,
-                              MiningSession.WATCH_PRIORITY, self._watch_algos)
 
     def _stop_mining(self):
         logging.info('Cleaning up')
