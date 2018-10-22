@@ -385,7 +385,7 @@ class MiningThread(threading.Thread):
             donate_settings['nicehash']['workername'] = 'nuxhash'
             for miner in self._miners:
                 miner.settings = donate_settings
-            self._scheduler.enter(interval, MiningSession.PROFIT_PRIORITY,
+            self._scheduler.enter(interval, MiningThread.PROFIT_PRIORITY,
                                   self._reset_miners)
 
         self._scheduler.enter(interval, MiningThread.PROFIT_PRIORITY,
