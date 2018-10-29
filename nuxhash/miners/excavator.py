@@ -106,8 +106,7 @@ class ExcavatorServer(object):
         ip, port = self._address
         self._process = subprocess.Popen(
             [self._executable, '-i', ip, '-p', str(port)],
-            stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
-            preexec_fn=os.setpgrp) # Don't forward signals.
+            stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         self._process.stdin.close()
 
         # Send stdout to logger.

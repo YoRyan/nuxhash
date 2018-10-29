@@ -32,6 +32,8 @@ DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
 
 
 def main():
+    sys.excepthook = excepthook
+
     argp = argparse.ArgumentParser(
         description='Sell GPU hash power on the NiceHash market.')
     argp_benchmark = argp.add_mutually_exclusive_group()
@@ -107,6 +109,12 @@ def main():
 
     settings.save_settings(config_dir, nx_settings)
     settings.save_benchmarks(config_dir, nx_benchmarks)
+
+
+def excepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    logging.critical('Crash! Killing all miners.')
+    os.killpg(os.getpgid(0), signal.SIGKILL) # (This also kills us.)
 
 
 def initial_setup():
@@ -249,6 +257,9 @@ class MiningSession(object):
         self._profit_switch.reset()
 
         # Attach the SIGINT signal for quitting.
+        # NOTE: If running in a shell, Ctrl-C will get sent to our subprocesses too,
+        #       because we are the foreground process group. Miners will get killed
+        #       before we have a chance to properly shut them down.
         signal.signal(signal.SIGINT, lambda signum, frame: self.stop())
 
         self._scheduler.enter(0, MiningSession.PROFIT_PRIORITY, self._switch_algos)
