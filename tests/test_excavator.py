@@ -21,7 +21,7 @@ class TestExcavator(unittest.TestCase):
         self.device = devices[0]
 
         self.excavator = Excavator(self.configdir)
-        self.excavator.settings = nuxhash.settings.DEFAULT_SETTINGS
+        self.excavator.settings = self.settings
         self.equihash = next(a for a in self.excavator.algorithms
                              if a.algorithms == ['equihash'])
         self.neoscrypt = next(a for a in self.excavator.algorithms
@@ -129,6 +129,15 @@ class TestExcavator(unittest.TestCase):
         self.assertRaises(AssertionError,
                           lambda: self.equihash.set_devices(devices))
 
+    def test_settings_switch(self):
+        self.equihash.set_devices([self.device])
+        sleep(1)
+        alt_settings = nuxhash.settings.DEFAULT_SETTINGS
+        alt_settings['nicehash']['wallet'] = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+        alt_settings['nicehash']['workername'] = 'nuxhashtest'
+        self.excavator.settings = alt_settings
+        self.assertEqual(self._get_workers(), [{ 'device_uuid': self.device.uuid,
+                                                 'algorithms': ['equihash'] }])
 
 if __name__ == '__main__':
     unittest.main()

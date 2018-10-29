@@ -52,8 +52,8 @@ class ExcavatorServer(object):
 
     def __init__(self, executable):
         self._executable = executable
-        self._region = self._auth = self._process = None
-        self._address = ('127.0.0.1', get_port())
+        self.__subscription = self._process = None
+        self.__address = ('127.0.0.1', get_port())
         # dict of algorithm name -> ESAlgorithm
         self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
                                     for algorithm in ALGORITHMS}
@@ -67,28 +67,45 @@ class ExcavatorServer(object):
         return None
     @settings.setter
     def settings(self, v):
-        self._region = v['nicehash']['region']
-        self._auth = '%s.%s:x' % (v['nicehash']['wallet'],
-                                  v['nicehash']['workername'])
-
-        # NOTE: Will break if the address is changed while excavator is running.
+        self._subscription = (v['nicehash']['region'],
+                              v['nicehash']['wallet'],
+                              v['nicehash']['workername'])
         if v['excavator_miner']['listen'] == '':
             self._address = ('127.0.0.1', get_port())
         else:
             ip, port = v['excavator_miner']['listen'].split(':')
             self._address = (ip, port)
 
-        if self._process is not None:
+    @property
+    def _subscription(self):
+        return self.__subscription
+    @_subscription.setter
+    def _subscription(self, v):
+        self.__subscription = v
+
+        if self.is_running():
             # As of API 0.1.8, this changes strata but leaves all workers running.
             self._subscribe()
 
+    @property
+    def _address(self):
+        return self.__address
+    @_address.setter
+    def _address(self, v):
+        if self.is_running():
+            self.stop()
+            self.__address = v
+            self.start()
+        else:
+            self.__address = v
+
     def start(self):
         """Launches excavator."""
-        assert self._region is not None and self._auth is not None
 
         # Start process.
+        ip, port = self._address
         self._process = subprocess.Popen(
-            [self._executable, '-i', self._address[0], '-p', str(self._address[1])],
+            [self._executable, '-i', ip, '-p', str(port)],
             stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
             preexec_fn=os.setpgrp) # Don't forward signals.
         self._process.stdin.close()
@@ -114,9 +131,10 @@ class ExcavatorServer(object):
             self.start_work(algorithm, device)
 
     def _subscribe(self):
+        region, wallet, worker = self._subscription
         self.send_command(
-            'subscribe', ['nhmp.%s.nicehash.com:%s' % (self._region, NHMP_PORT),
-                          self._auth])
+            'subscribe', ['nhmp.%s.nicehash.com:%s' % (region, NHMP_PORT),
+                          '%s.%s:x' % (wallet, worker)])
 
     def stop(self):
         """Stops excavator."""
@@ -131,9 +149,7 @@ class ExcavatorServer(object):
         self._process.wait()
 
     def is_running(self):
-        return (self._process is not None
-                and self._process.poll() is None
-                and self._test_connection())
+        return self._process is not None and self._process.poll() is None
 
     def send_command(self, method, params):
         """Sends a command to excavator, returns the JSON-encoded response.
