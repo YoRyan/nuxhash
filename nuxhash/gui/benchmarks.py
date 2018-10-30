@@ -112,7 +112,6 @@ class BenchmarksScreen(wx.Panel):
     def _OnClose(self):
         if self._ThreadRunning():
             self._Thread.stop()
-            self._Thread.join()
 
     def _Repopulate(self):
         allAlgorithms = sum([miner.algorithms for miner in self._Miners], [])
@@ -170,7 +169,6 @@ class BenchmarksScreen(wx.Panel):
             self._Thread.start()
         elif running:
             self._Thread.stop()
-            self._Thread.join()
 
     def _OnBenchmarkStatus(self, target, speeds, time, warmup=False):
         item = self._Items[target]
@@ -281,6 +279,7 @@ class BenchmarkThread(threading.Thread):
 
     def stop(self):
         self._abort.set()
+        self.join()
 
 
 class Item(object):
