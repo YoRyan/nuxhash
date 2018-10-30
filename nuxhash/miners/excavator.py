@@ -54,7 +54,8 @@ class ExcavatorServer(object):
     def __init__(self, executable):
         self._executable = executable
         self.__subscription = self._process = None
-        self.__address = ('127.0.0.1', get_port())
+        self._randport = get_port()
+        self.__address = ('127.0.0.1', self._randport)
         # dict of algorithm name -> ESAlgorithm
         self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
                                     for algorithm in ALGORITHMS}
@@ -72,7 +73,7 @@ class ExcavatorServer(object):
                               v['nicehash']['wallet'],
                               v['nicehash']['workername'])
         if v['excavator_miner']['listen'] == '':
-            self._address = ('127.0.0.1', get_port())
+            self._address = ('127.0.0.1', self._randport)
         else:
             ip, port = v['excavator_miner']['listen'].split(':')
             self._address = (ip, port)
@@ -82,23 +83,24 @@ class ExcavatorServer(object):
         return self.__subscription
     @_subscription.setter
     def _subscription(self, v):
-        self.__subscription = v
-
-        if self.is_running():
-            # As of API 0.1.8, this changes strata but leaves all workers running.
-            self._subscribe()
+        if v != self.__address:
+            self.__subscription = v
+            if self.is_running():
+                # As of API 0.1.8, this changes strata but leaves all workers running.
+                self._subscribe()
 
     @property
     def _address(self):
         return self.__address
     @_address.setter
     def _address(self, v):
-        if self.is_running():
-            self.stop()
-            self.__address = v
-            self.start()
-        else:
-            self.__address = v
+        if v != self.__address:
+            if self.is_running():
+                self.stop()
+                self.__address = v
+                self.start()
+            else:
+                self.__address = v
 
     def start(self):
         """Launches excavator."""
@@ -147,6 +149,10 @@ class ExcavatorServer(object):
             s.sendall(js_data.encode('ascii'))
 
         self._process.wait()
+
+        # Clear running algorithms so they will be recreated on restart.
+        self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
+                                    for algorithm in ALGORITHMS}
 
     def is_running(self):
         return self._process is not None and self._process.poll() is None

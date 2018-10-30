@@ -16,9 +16,14 @@ class TestExcavator(unittest.TestCase):
 
     def setUp(self):
         self.configdir = nuxhash.settings.DEFAULT_CONFIGDIR
+        self.device = devices[0]
+
         self.settings = nuxhash.settings.DEFAULT_SETTINGS
         self.settings['nicehash']['wallet'] = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
-        self.device = devices[0]
+
+        self.alt_settings = nuxhash.settings.DEFAULT_SETTINGS
+        self.alt_settings['nicehash']['wallet'] = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+        self.alt_settings['nicehash']['workername'] = 'nuxhashtest'
 
         self.excavator = Excavator(self.configdir)
         self.excavator.settings = self.settings
@@ -132,12 +137,16 @@ class TestExcavator(unittest.TestCase):
     def test_settings_switch(self):
         self.equihash.set_devices([self.device])
         sleep(1)
-        alt_settings = nuxhash.settings.DEFAULT_SETTINGS
-        alt_settings['nicehash']['wallet'] = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-        alt_settings['nicehash']['workername'] = 'nuxhashtest'
-        self.excavator.settings = alt_settings
+        self.excavator.settings = self.alt_settings
         self.assertEqual(self._get_workers(), [{ 'device_uuid': self.device.uuid,
                                                  'algorithms': ['equihash'] }])
+
+    def test_settings_switch_algorithm(self):
+        self.equihash.set_devices([self.device])
+        sleep(1)
+        self.excavator.settings = self.alt_settings
+        self.assertEqual(self._get_algorithms(), ['equihash'])
+
 
 if __name__ == '__main__':
     unittest.main()
