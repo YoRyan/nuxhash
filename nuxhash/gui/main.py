@@ -1,7 +1,10 @@
 import logging
 import os
+import signal
+import sys
 import threading
 from pathlib import Path
+from subprocess import Popen
 
 import wx
 from wx.lib.pubsub import pub
@@ -138,8 +141,16 @@ def sendMessage(window, topic, **data):
 
 
 def main():
+    sys.excepthook = excepthook
+
     app = wx.App(False)
     frame = MainWindow(None, title='nuxhash')
     frame.Show()
     app.MainLoop()
+
+def excepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    # Restart the app and kill all miners.
+    Popen(sys.argv, preexec_fn=os.setpgrp)
+    os.killpg(os.getpgid(0), signal.SIGKILL) # (This also kills us.)
 
