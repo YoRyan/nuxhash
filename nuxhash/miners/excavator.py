@@ -27,6 +27,7 @@ ALGORITHMS = [
     'neoscrypt',
     #'nist5',
     'cryptonightV7',
+    'cryptonightV8',
     'lyra2z',
     'x16r'
     ]
