@@ -267,12 +267,16 @@ class ESAlgorithm(ESResource):
     def _create(self):
         if self._benchmark:
             self._server.send_command('algorithm.add',
-                                      [self._algorithm, 'benchmark'])
+                                      ['benchmark-%s' % self._algorithm])
         else:
             self._server.send_command('algorithm.add', [self._algorithm])
 
     def _destroy(self):
-        self._server.send_command('algorithm.remove', [self._algorithm])
+        if self._benchmark:
+            self._server.send_command('algorithm.remove',
+                                      ['benchmark-%s' % self._algorithm])
+        else:
+            self._server.send_command('algorithm.remove', [self._algorithm])
 
 
 class ExcavatorAlgorithm(miner.Algorithm):

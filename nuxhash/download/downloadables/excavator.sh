@@ -1,11 +1,11 @@
 #!/bin/sh
 
-VERSION='1.5.11a'
-MD5='9d1aaf2c36ebf57aac1f45e8cfe467b2'
+VERSION='1.5.13a'
+SHA256='997f585216e9368efb846b03db2ae7612984beea303c3740caf5a4b32af60319'
 
 case "$1" in
 verify)
-        [ -f excavator ] && [ `md5sum excavator | awk '{print $1}'` = "$MD5" ]
+        [ -f excavator ] && [ `sha256sum excavator | awk '{print $1}'` = "$SHA256" ]
         exit $?
         ;;
 download)
