@@ -205,7 +205,11 @@ class ExcavatorServer(object):
 
         # Create worker.
         device_id = self._device_map[device.pci_bus]
-        response = self.send_command('worker.add', [algorithm, device_id])
+        if benchmarking:
+            response = self.send_command('worker.add', ['benchmark-%s' % algorithm,
+                                                        device_id])
+        else:
+            response = self.send_command('worker.add', [algorithm, device_id])
         self._running_workers[(algorithm, device)] = response['worker_id']
 
     def stop_work(self, algorithm, device):
