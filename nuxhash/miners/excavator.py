@@ -3,7 +3,7 @@ import os
 import socket
 import subprocess
 import threading
-from time import sleep
+import time
 
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.miners import miner
@@ -50,12 +50,14 @@ class ExcavatorServer(object):
 
     BUFFER_SIZE = 1024
     TIMEOUT = 10
+    RATE_LIMIT = 0.1
 
     def __init__(self, executable):
         self._executable = executable
         self.__subscription = self._process = None
         self._randport = get_port()
         self.__address = ('127.0.0.1', self._randport)
+        self._limiter = RateLimiter(min_interval=self.RATE_LIMIT)
         # dict of algorithm name -> ESAlgorithm
         self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
                                     for algorithm in ALGORITHMS}
@@ -119,9 +121,7 @@ class ExcavatorServer(object):
 
         # Wait for startup.
         while not self._test_connection():
-            if self._process.poll() is None:
-                sleep(1)
-            else:
+            if self._process.poll() is not None:
                 raise miner.MinerStartFailed
 
         self._read_devices()
@@ -140,13 +140,8 @@ class ExcavatorServer(object):
 
     def stop(self):
         """Stops excavator."""
-        # Disconnect from NiceHash.
         self.send_command('unsubscribe', [])
-
-        # Send the quit command, but don't read a response.
-        js_data = json.dumps({ 'id': 1, 'method': 'quit', 'params': [] }) + '\n'
-        with socket.create_connection(self._address, self.TIMEOUT) as s:
-            s.sendall(js_data.encode('ascii'))
+        self.send_command_only('quit', [])
 
         self._process.wait()
 
@@ -163,6 +158,7 @@ class ExcavatorServer(object):
         method -- name of the command to execute
         params -- list of arguments for the command
         """
+        self._limiter.wait()
         # Send newline-terminated command.
         command = {
             'id': 1,
@@ -188,9 +184,26 @@ class ExcavatorServer(object):
         else:
             raise ExcavatorAPIError(response_data)
 
+    def send_command_only(self, method, params):
+        """Sends a command to excavator, returns the JSON-encoded response.
+
+        method -- name of the command to execute
+        params -- list of arguments for the command
+        """
+        self._limiter.wait()
+        # Send newline-terminated command.
+        command = {
+            'id': 1,
+            'method': method,
+            'params': [str(param) for param in params]
+            }
+        js_data = json.dumps(command).replace('\n', '\\n') + '\n'
+        with socket.create_connection(self._address, self.TIMEOUT) as s:
+            s.sendall(js_data.encode('ascii'))
+
     def _test_connection(self):
         try:
-            self.send_command('info', [])
+            self.send_command_only('info', [])
         except (socket.error, socket.timeout, ValueError):
             return False
         else:
@@ -239,6 +252,20 @@ class ExcavatorServer(object):
                     if worker['device_id'] == device_id)
         return {algorithm['name']: algorithm['speed']
                 for algorithm in data['algorithms']}
+
+
+class RateLimiter(object):
+
+    def __init__(self, min_interval=1):
+        self._min_interval = min_interval
+        self._last = None
+
+    def wait(self):
+        if self._last is not None:
+            t = time.time() - self._last
+            if t < self._min_interval:
+                time.sleep(self._min_interval - t)
+        self._last = time.time()
 
 
 class ESResource(object):
