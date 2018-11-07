@@ -91,6 +91,7 @@ class ExcavatorServer(object):
             self.__subscription = v
             if self.is_running():
                 # As of API 0.1.8, this changes strata but leaves all workers running.
+                self.send_command('unsubscribe', [])
                 self._subscribe()
 
     @property
