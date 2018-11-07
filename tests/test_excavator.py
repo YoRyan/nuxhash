@@ -147,6 +147,16 @@ class TestExcavator(unittest.TestCase):
         self.excavator.settings = self.alt_settings
         self.assertEqual(self._get_algorithms(), ['equihash'])
 
+    def test_settings_switch_back(self):
+        self.equihash.set_devices([self.device])
+        sleep(1)
+        status = (self._get_workers(), self._get_algorithms())
+        self.excavator.settings = self.alt_settings
+        sleep(1)
+        self.excavator.settings = self.settings
+        sleep(1)
+        self.assertEqual(status, (self._get_workers(), self._get_algorithms()))
+
 
 if __name__ == '__main__':
     unittest.main()
