@@ -57,6 +57,7 @@ class ExcavatorServer(object):
         self.__subscription = self._process = None
         self._randport = get_port()
         self.__address = ('127.0.0.1', self._randport)
+        self._extra_args = []
         self._limiter = RateLimiter(min_interval=self.RATE_LIMIT)
         # dict of algorithm name -> ESAlgorithm
         self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
@@ -79,6 +80,7 @@ class ExcavatorServer(object):
         else:
             ip, port = v['excavator_miner']['listen'].split(':')
             self._address = (ip, port)
+        self._extra_args = v['excavator_miner']['args'].split()
 
     @property
     def _subscription(self):
@@ -110,7 +112,7 @@ class ExcavatorServer(object):
         # Start process.
         ip, port = self._address
         self._process = subprocess.Popen(
-            [self._executable, '-i', ip, '-p', str(port)],
+            [self._executable, '-i', ip, '-p', str(port)] + self._extra_args,
             stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         self._process.stdin.close()
 
