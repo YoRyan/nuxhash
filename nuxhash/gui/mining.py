@@ -1,5 +1,4 @@
 import logging
-import os
 import sched
 import socket
 import threading
@@ -322,8 +321,7 @@ class MiningThread(threading.Thread):
             try:
                 payrates, stratums = nicehash.simplemultialgo_info(
                     self._settings)
-            except (os.ConnectionError, socket.error,
-                    socket.timeout, SSLError, URLError):
+            except (ConnectionError, IOError, OSError):
                 time.sleep(5)
         self._miners = [miner(main.CONFIG_DIR) for miner in all_miners]
         for miner in self._miners:
@@ -350,8 +348,7 @@ class MiningThread(threading.Thread):
         # Get profitability information from NiceHash.
         try:
             payrates, stratums = nicehash.simplemultialgo_info(self._settings)
-        except (os.ConnectionError, socket.error,
-                socket.timeout, SSLError, URLError) as err:
+        except (ConnectionError, IOError, OSError) as err:
             logging.warning('NiceHash stats: %s' % err)
         except nicehash.BadResponseError:
             logging.warning('NiceHash stats: Bad response')

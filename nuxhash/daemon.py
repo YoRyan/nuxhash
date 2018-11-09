@@ -243,8 +243,7 @@ class MiningSession(object):
         while payrates is None:
             try:
                 payrates, stratums = nicehash.simplemultialgo_info(self._settings)
-            except (os.ConnectionError, socket.error,
-                    socket.timeout, SSLError, URLError):
+            except (ConnectionError, IOError, OSError):
                 time.sleep(5)
             else:
                 self._last_payrates = (payrates, datetime.now())
@@ -276,8 +275,7 @@ class MiningSession(object):
         # Get profitability information from NiceHash.
         try:
             payrates, stratums = nicehash.simplemultialgo_info(self._settings)
-        except (os.ConnectionError, socket.error,
-                socket.timeout, SSLError, URLError) as err:
+        except (ConnectionError, IOError, OSError) as err:
             logging.warning('NiceHash stats: %s' % err)
         except nicehash.BadResponseError:
             logging.warning('NiceHash stats: Bad response')
