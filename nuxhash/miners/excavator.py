@@ -131,6 +131,8 @@ class ExcavatorServer(object):
         self._subscribe()
 
         # Add back previously running workers.
+        self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
+                                    for algorithm in ALGORITHMS}
         for key, worker_id in self._running_workers.items():
             algorithm, device = key
             self.start_work(algorithm, device)
@@ -147,10 +149,6 @@ class ExcavatorServer(object):
         self.send_command_only('quit', [])
 
         self._process.wait()
-
-        # Clear running algorithms so they will be recreated on restart.
-        self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
-                                    for algorithm in ALGORITHMS}
 
     def is_running(self):
         return self._process is not None and self._process.poll() is None

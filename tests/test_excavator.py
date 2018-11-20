@@ -1,4 +1,5 @@
 import unittest
+from subprocess import call
 from time import sleep
 
 import nuxhash.settings
@@ -155,6 +156,15 @@ class TestExcavator(unittest.TestCase):
         sleep(1)
         self.excavator.settings = self.settings
         sleep(1)
+        self.assertEqual(status, (self._get_workers(), self._get_algorithms()))
+
+    def test_restart_after_crash(self):
+        self.equihash.set_devices([self.device])
+        status = (self._get_workers(), self._get_algorithms())
+        sleep(1)
+        call(['killall', 'excavator'])
+        sleep(1)
+        self.equihash.current_speeds()
         self.assertEqual(status, (self._get_workers(), self._get_algorithms()))
 
 
