@@ -229,7 +229,7 @@ class MiningSession(object):
         self._settings = settings
         self._benchmarks = benchmarks
         self._devices = devices
-        self._last_payrates = (None, None)
+        self._payrates = (None, None)
         self._quit_signal = Event()
         self._scheduler = sched.scheduler(
                 time.time, lambda t: self._quit_signal.wait(t))
@@ -246,7 +246,7 @@ class MiningSession(object):
             except (ConnectionError, IOError, OSError):
                 time.sleep(5)
             else:
-                self._last_payrates = (payrates, datetime.now())
+                self._payrates = (payrates, datetime.now())
         for miner in self._miners:
             miner.stratums = stratums
             miner.load()
@@ -270,18 +270,18 @@ class MiningSession(object):
         self._quit_signal.set()
 
     def _switch_algos(self):
-        interval = self._settings['switching']['interval']
-
         # Get profitability information from NiceHash.
         try:
-            payrates, stratums = nicehash.simplemultialgo_info(self._settings)
+            ret_payrates, stratums = nicehash.simplemultialgo_info(self._settings)
         except (ConnectionError, IOError, OSError) as err:
             logging.warning('NiceHash stats: %s' % err)
         except nicehash.BadResponseError:
             logging.warning('NiceHash stats: Bad response')
         else:
-            download_time = datetime.now()
-            self._last_payrates = (payrates, download_time)
+            self._payrates = (ret_payrates, datetime.now())
+
+        interval = self._settings['switching']['interval']
+        payrates, payrates_time = self._payrates
 
         # Calculate BTC/day rates.
         def revenue(device, algorithm):
@@ -297,7 +297,7 @@ class MiningSession(object):
                     for device in self._devices}
 
         # Get device -> algorithm assignments from profit switcher.
-        self._assignments = self._profit_switch.decide(revenues, download_time)
+        self._assignments = self._profit_switch.decide(revenues, payrates_time)
         for this_algorithm in self._algorithms:
             this_devices = [device for device, algorithm
                             in self._assignments.items()

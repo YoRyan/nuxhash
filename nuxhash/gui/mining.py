@@ -310,6 +310,7 @@ class MiningThread(threading.Thread):
         self._settings = settings
         self._benchmarks = benchmarks
         self._devices = devices
+        self._payrates = (None, None)
         self._stop_signal = threading.Event()
         self._scheduler = sched.scheduler(
             time.time, lambda t: self._stop_signal.wait(t))
@@ -323,6 +324,8 @@ class MiningThread(threading.Thread):
                     self._settings)
             except (ConnectionError, IOError, OSError):
                 time.sleep(5)
+            else:
+                self._payrates = payrates
         self._miners = [miner(main.CONFIG_DIR) for miner in all_miners]
         for miner in self._miners:
             miner.settings = self._settings
@@ -343,18 +346,18 @@ class MiningThread(threading.Thread):
         self.join()
 
     def _switch_algos(self):
-        interval = self._settings['switching']['interval']
-
         # Get profitability information from NiceHash.
         try:
-            payrates, stratums = nicehash.simplemultialgo_info(self._settings)
+            ret_payrates, stratums = nicehash.simplemultialgo_info(self._settings)
         except (ConnectionError, IOError, OSError) as err:
             logging.warning('NiceHash stats: %s' % err)
         except nicehash.BadResponseError:
             logging.warning('NiceHash stats: Bad response')
         else:
-            download_time = datetime.now()
-            self._current_payrates = payrates
+            self._payrates = (ret_payrates, datetime.now())
+
+        interval = self._settings['switching']['interval']
+        payrates, payrates_time = self._payrates
 
         # Calculate BTC/day rates.
         def revenue(device, algorithm):
@@ -370,7 +373,7 @@ class MiningThread(threading.Thread):
                     for device in self._devices}
 
         # Get device -> algorithm assignments from profit switcher.
-        assigned_algorithm = self._profit_switch.decide(revenues, download_time)
+        assigned_algorithm = self._profit_switch.decide(revenues, payrates_time)
         self._assignments = assigned_algorithm
         for this_algorithm in self._algorithms:
             this_devices = [device for device, algorithm
@@ -397,10 +400,11 @@ class MiningThread(threading.Thread):
             miner.settings = self._settings
 
     def _read_status(self):
+        payrates, payrates_time = self._payrates
         running_algorithms = self._assignments.values()
         speeds = {algorithm: algorithm.current_speeds()
                   for algorithm in running_algorithms}
-        revenue = {algorithm: sum([self._current_payrates[multialgorithm]
+        revenue = {algorithm: sum([payrates[multialgorithm]
                                    *speeds[algorithm][i]
                                    for i, multialgorithm
                                    in enumerate(algorithm.algorithms)])
