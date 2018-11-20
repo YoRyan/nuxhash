@@ -3,7 +3,6 @@ import os
 import socket
 import subprocess
 import threading
-import time
 
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.miners import miner
@@ -50,7 +49,6 @@ class ExcavatorServer(object):
 
     BUFFER_SIZE = 1024
     TIMEOUT = 10
-    RATE_LIMIT = 0.1
 
     def __init__(self, executable):
         self._executable = executable
@@ -58,7 +56,6 @@ class ExcavatorServer(object):
         self._randport = get_port()
         self.__address = ('127.0.0.1', self._randport)
         self._extra_args = []
-        self._limiter = RateLimiter(min_interval=self.RATE_LIMIT)
         # dict of algorithm name -> ESAlgorithm
         self._running_algorithms = {algorithm: ESAlgorithm(self, algorithm)
                                     for algorithm in ALGORITHMS}
@@ -159,7 +156,6 @@ class ExcavatorServer(object):
         method -- name of the command to execute
         params -- list of arguments for the command
         """
-        self._limiter.wait()
         # Send newline-terminated command.
         command = {
             'id': 1,
@@ -191,7 +187,6 @@ class ExcavatorServer(object):
         method -- name of the command to execute
         params -- list of arguments for the command
         """
-        self._limiter.wait()
         # Send newline-terminated command.
         command = {
             'id': 1,
@@ -253,20 +248,6 @@ class ExcavatorServer(object):
                     if worker['device_id'] == device_id)
         return {algorithm['name']: algorithm['speed']
                 for algorithm in data['algorithms']}
-
-
-class RateLimiter(object):
-
-    def __init__(self, min_interval=1):
-        self._min_interval = min_interval
-        self._last = None
-
-    def wait(self):
-        if self._last is not None:
-            t = time.time() - self._last
-            if t < self._min_interval:
-                time.sleep(self._min_interval - t)
-        self._last = time.time()
 
 
 class ESResource(object):
