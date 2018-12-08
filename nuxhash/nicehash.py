@@ -7,16 +7,24 @@ from urllib.request import urlopen
 TIMEOUT = 20
 
 
-class NicehashAPIError(Exception):
-    """Exception returned by the NiceHash service."""
+class NicehashException(Exception):
+    """An exceptional reponse returned by the NiceHash service."""
+    pass
+
+
+class APIError(NicehashException):
+
     def __init__(self, result):
         self.result = result
-        self.error = result['error']
+
+    def __str__(self):
+        return 'NH: %s' % self.result['error']
 
 
-class BadResponseError(Exception):
-    """Bad response from the NiceHash service."""
-    pass
+class BadResponse(NicehashException):
+
+    def __str__(self):
+        return 'Bad JSON response'
 
 
 def api_call(method, params):
@@ -27,10 +35,10 @@ def api_call(method, params):
         try:
             result = json.load(request)['result']
         except (ValueError, KeyError):
-            raise BadResponseError()
+            raise BadResponse
         else:
             if 'error' in result:
-                raise NicehashAPIError(result)
+                raise APIError(result)
             else:
                 return result
 

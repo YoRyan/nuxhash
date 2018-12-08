@@ -11,9 +11,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from random import random
-from ssl import SSLError
 from threading import Event
-from urllib.error import URLError
 
 from nuxhash import nicehash, settings, utils
 from nuxhash.bitcoin import check_bc
@@ -29,6 +27,7 @@ from nuxhash.version import __version__
 BENCHMARK_SECS = 60
 DONATE_PROB = 0.005
 DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
+NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
 
 def main():
@@ -243,7 +242,8 @@ class MiningSession(object):
         while payrates is None:
             try:
                 payrates, stratums = nicehash.simplemultialgo_info(self._settings)
-            except (ConnectionError, IOError, OSError):
+            except NH_EXCEPTIONS as err:
+                logging.warning('NiceHash stats: %s, retrying in 5 seconds' % err)
                 time.sleep(5)
             else:
                 self._payrates = (payrates, datetime.now())
@@ -273,10 +273,8 @@ class MiningSession(object):
         # Get profitability information from NiceHash.
         try:
             ret_payrates, stratums = nicehash.simplemultialgo_info(self._settings)
-        except (ConnectionError, IOError, OSError) as err:
+        except NH_EXCEPTIONS as err:
             logging.warning('NiceHash stats: %s' % err)
-        except nicehash.BadResponseError:
-            logging.warning('NiceHash stats: Bad response')
         else:
             self._payrates = (ret_payrates, datetime.now())
 

@@ -7,7 +7,7 @@ from nuxhash import nicehash
 class TestNHApi(TestCase):
 
     def runTest(self):
-        self.assertRaises(nicehash.NicehashAPIError,
+        self.assertRaises(nicehash.APIError,
                           lambda: nicehash.api_call('unknown', {}))
 
 
@@ -18,7 +18,7 @@ class TestNHBalance(TestCase):
         self.assertGreaterEqual(balance, 0.0)
 
     def test_bad_address(self):
-        self.assertRaises(nicehash.NicehashAPIError,
+        self.assertRaises(nicehash.APIError,
                           lambda: nicehash.unpaid_balance('x'))
 
 
