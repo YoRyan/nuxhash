@@ -26,7 +26,6 @@ BALANCE_UPDATE_MIN = 5
 NVIDIA_COLOR = (66, 244, 69)
 DONATE_PROB = 0.005
 DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
-NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
 
 class MiningScreen(wx.Panel):
@@ -301,6 +300,7 @@ class MiningThread(threading.Thread):
     PROFIT_PRIORITY = 1
     STATUS_PRIORITY = 2
     STOP_PRIORITY = 0
+    NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
     def __init__(self, devices=[], window=None,
                  settings=DEFAULT_SETTINGS, benchmarks=EMPTY_BENCHMARKS):

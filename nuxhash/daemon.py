@@ -27,7 +27,6 @@ from nuxhash.version import __version__
 BENCHMARK_SECS = 60
 DONATE_PROB = 0.005
 DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
-NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
 
 def main():
@@ -222,6 +221,7 @@ class MiningSession(object):
 
     PROFIT_PRIORITY = 1
     STOP_PRIORITY = 0
+    NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
     def __init__(self, miners, settings, benchmarks, devices):
         self._miners = miners
