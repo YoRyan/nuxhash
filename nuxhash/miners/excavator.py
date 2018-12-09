@@ -182,7 +182,7 @@ class ExcavatorServer(object):
             raise ExcavatorAPIError(response_data)
 
     def send_command_only(self, method, params):
-        """Sends a command to excavator, returns the JSON-encoded response.
+        """Sends a command to excavator without reading the response.
 
         method -- name of the command to execute
         params -- list of arguments for the command
