@@ -31,23 +31,32 @@ CUDA device: GeForce GTX 1060 6GB (GPU-452679f3-ba2b-2cfe-4aff-5a50c4a32efb)
   excavator_equihash  .  287.41  H/s (warming up, 23 s)
 ```
 
+## Dependencies
+
+* Python 3.6 or later
+* Nvidia's proprietary graphics driver for Linux, version 387.xx or later
+* curl
+
+Optionally, for the GUI interface:
+
+* wxPython 4 for Python 3
+
 ## Quick Start
 
 Install the following dependencies (this list is for Ubuntu 18.04 LTS):
 
-* Python 3.6
-* Nvidia's proprietary graphics driver for Linux, version 387.xx or later
-* curl (to download excavator)
+* python3
+* python3-pip
+* curl
 * ocl-icd-libopencl1 [(to run CUDA apps)](https://askubuntu.com/questions/1032430/opencl-with-nvidia-390-on-ubunut-18-04)
 
-Optionally, install this to enable the GUI interface:
+Optionally, install this package to enable the GUI interface:
 
 * python3-wxgtk4.0
 
 Then, install nuxhash.
 
 ```
-$ sudo apt install python3-pip
 $ sudo pip3 install git+https://github.com/YoRyan/nuxhash
 ```
 
