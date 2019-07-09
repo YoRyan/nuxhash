@@ -104,16 +104,27 @@ def main():
         nx_benchmarks = run_missing_benchmarks(
             nx_miners, nx_settings, all_devices, nx_benchmarks)
         session = MiningSession(nx_miners, nx_settings, nx_benchmarks, all_devices)
+        # Attach the SIGINT signal for quitting.
+        # NOTE: If running in a shell, Ctrl-C will get sent to our subprocesses too,
+        #       because we are the foreground process group. Miners will get killed
+        #       before we have a chance to properly shut them down.
+        signal.signal(signal.SIGINT, lambda signum, frame: session.stop())
         session.run()
 
     settings.save_settings(config_dir, nx_settings)
     settings.save_benchmarks(config_dir, nx_benchmarks)
+
+    terminate()
 
 
 def excepthook(type, value, traceback):
     sys.__excepthook__(type, value, traceback)
     logging.critical('Crash! Killing all miners.')
     os.killpg(os.getpgid(0), signal.SIGKILL) # (This also kills us.)
+
+
+def terminate():
+    os.killpg(os.getpgid(0), signal.SIGTERM)
 
 
 def initial_setup():
@@ -256,12 +267,6 @@ class MiningSession(object):
         self._profit_switch = NaiveSwitcher(self._settings)
         self._profit_switch.reset()
 
-        # Attach the SIGINT signal for quitting.
-        # NOTE: If running in a shell, Ctrl-C will get sent to our subprocesses too,
-        #       because we are the foreground process group. Miners will get killed
-        #       before we have a chance to properly shut them down.
-        signal.signal(signal.SIGINT, lambda signum, frame: self.stop())
-
         self._scheduler.enter(0, MiningSession.PROFIT_PRIORITY, self._switch_algos)
         self._scheduler.run()
 
@@ -321,11 +326,7 @@ class MiningSession(object):
             miner.settings = self._settings
 
     def _stop_mining(self):
-        logging.info('Cleaning up')
-        for algorithm in self._algorithms:
-            algorithm.set_devices([])
-        for miner in self._miners:
-            miner.unload()
+        logging.info('Quit signal received, terminating miners')
         # Empty the scheduler.
         for job in self._scheduler.queue:
             self._scheduler.cancel(job)

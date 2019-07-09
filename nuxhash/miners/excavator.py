@@ -111,8 +111,7 @@ class ExcavatorServer(object):
         ip, port = self._address
         self._process = subprocess.Popen(
             [self._executable, '-i', ip, '-p', str(port)] + self._extra_args,
-            stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        self._process.stdin.close()
+            stdin=subprocess.DEVNULL, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
 
         # Send stdout to logger.
         log_thread = threading.Thread(
