@@ -1,4 +1,5 @@
 import configparser
+import errno
 import json
 import os
 from collections import defaultdict
@@ -108,7 +109,7 @@ def load_settings(config_dir):
         with open(config_dir/SETTINGS_FILENAME, 'r') as settings_fd:
             settings = read_settings_from_file(settings_fd)
     except IOError as err:
-        if err.errno != os.errno.ENOENT:
+        if err.errno != errno.ENOENT:
             raise
         return DEFAULT_SETTINGS
     else:
@@ -120,7 +121,7 @@ def load_benchmarks(config_dir, devices):
         with open(config_dir/BENCHMARKS_FILENAME, 'r') as benchmarks_fd:
             benchmarks = read_benchmarks_from_file(benchmarks_fd, devices)
     except IOError as err:
-        if err.errno != os.errno.ENOENT:
+        if err.errno != errno.ENOENT:
             raise
         return EMPTY_BENCHMARKS
     else:
