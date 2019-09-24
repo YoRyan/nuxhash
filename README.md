@@ -18,7 +18,7 @@ Donations: bc1q2ne5zqa6k5egd82p4rv0rn44tpc35gv3afu52n
 
 ```
 nuxhashd initial setup
-Wallet address: 3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23
+Wallet address: 3DJBpNcgP3Pihw45p9544PK6TbbYeMcnk7
 Worker name: nuxhash
 Region (eu/usa/hk/jp/in/br): usa
 

@@ -1,5 +1,6 @@
 from unittest import main, TestCase
 
+from nuxhash.daemon import DONATE_ADDRESS
 from nuxhash.settings import DEFAULT_SETTINGS
 from nuxhash import nicehash
 
@@ -14,7 +15,7 @@ class TestNHApi(TestCase):
 class TestNHBalance(TestCase):
 
     def test_balance(self):
-        balance = nicehash.unpaid_balance('3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23')
+        balance = nicehash.unpaid_balance(DONATE_ADDRESS)
         self.assertGreaterEqual(balance, 0.0)
 
     def test_bad_address(self):

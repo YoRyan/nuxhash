@@ -13,6 +13,7 @@ from wx.lib.pubsub import pub
 
 from nuxhash import nicehash, utils
 from nuxhash.bitcoin import check_bc
+from nuxhash.daemon import DONATE_ADDRESS
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners import all_miners
@@ -25,7 +26,6 @@ MINING_UPDATE_SECS = 5
 BALANCE_UPDATE_MIN = 5
 NVIDIA_COLOR = (66, 244, 69)
 DONATE_PROB = 0.005
-DONATE_ADDRESS = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
 NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
 

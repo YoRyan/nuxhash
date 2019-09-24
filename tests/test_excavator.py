@@ -3,6 +3,7 @@ from subprocess import call
 from time import sleep
 
 import nuxhash.settings
+from nuxhash.daemon import DONATE_ADDRESS
 from nuxhash.devices.nvidia import enumerate_devices as nvidia_devices
 from nuxhash.download.downloads import make_miners
 from nuxhash.miners.excavator import Excavator
@@ -20,7 +21,7 @@ class TestExcavator(unittest.TestCase):
         self.device = devices[0]
 
         self.settings = nuxhash.settings.DEFAULT_SETTINGS
-        self.settings['nicehash']['wallet'] = '3Qe7nT9hBSVoXr8rM2TG6pq82AmLVKHy23'
+        self.settings['nicehash']['wallet'] = DONATE_ADDRESS
 
         self.alt_settings = nuxhash.settings.DEFAULT_SETTINGS
         self.alt_settings['nicehash']['wallet'] = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
