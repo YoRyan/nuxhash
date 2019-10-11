@@ -2,14 +2,19 @@ from unittest import main, TestCase
 
 from nuxhash.daemon import DONATE_ADDRESS
 from nuxhash.settings import DEFAULT_SETTINGS
-from nuxhash import nicehash
+from nuxhash.nicehash import get_request, post_request, api2_send
 
 
 class TestNHApi(TestCase):
 
-    def runTest(self):
-        self.assertRaises(nicehash.APIError,
-                          lambda: nicehash.api_call('unknown', {}))
+    def test_get_request(self):
+        response = api2_send(get_request('exchangeRate', 'list'))
+        self.assertIn('list', response)
+
+        exchange = response['list'][0]
+        self.assertIn('exchangeRate', exchange)
+        self.assertIn('toCurrency', exchange)
+        self.assertIn('fromCurrency', exchange)
 
 
 class TestNHBalance(TestCase):
@@ -31,7 +36,7 @@ class TestNHMultialgo(TestCase):
         self.payrates, self.stratums = nicehash.simplemultialgo_info(settings)
 
     def test_payrate(self):
-        self.assertGreaterEqual(self.payrates['cryptonight'], 0.0)
+        self.assertGreater(self.payrates['cryptonight'], 0.0)
 
     def test_stratum(self):
         self.assertEqual(self.stratums['cryptonight'],

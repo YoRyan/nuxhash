@@ -1,9 +1,10 @@
 import json
 import logging
-from urllib.parse import urlencode
-from urllib.request import urlopen
+
+from requests import Request, Session
 
 
+API2_ENDPOINT = 'https://api2.nicehash.com/main/api/v2/'
 TIMEOUT = 20
 
 
@@ -18,7 +19,7 @@ class APIError(NicehashException):
         self.result = result
 
     def __str__(self):
-        return 'NH: %s' % self.result['error']
+        return f"NH: {self.result['error']}"
 
 
 class BadResponse(NicehashException):
@@ -27,20 +28,28 @@ class BadResponse(NicehashException):
         return 'Bad JSON response'
 
 
-def api_call(method, params):
-    get_data = { 'method': method }
-    get_data.update(params)
-    with urlopen('https://api.nicehash.com/api?%s'
-                 % urlencode(get_data), timeout=TIMEOUT) as request:
+def get_request(*path, **params):
+    return Request('GET', f"{API2_ENDPOINT}{'/'.join(path)}",
+                   params=params).prepare()
+
+
+def post_request(body, *path, **params):
+    return Request('POST', f"{API2_ENDPOINT}{'/'.join(path)}",
+                   data=body, params=params).prepare()
+
+
+def api2_send(prepped_request):
+    with Session() as session:
+        response = session.send(prepped_request, timeout=TIMEOUT)
         try:
-            result = json.load(request)['result']
+            json_response = response.json()
         except (ValueError, KeyError):
             raise BadResponse
         else:
-            if 'error' in result:
-                raise APIError(result)
+            if 'error' in json_response:
+                raise APIError(json_response)
             else:
-                return result
+                return json_response
 
 
 def unpaid_balance(address):
