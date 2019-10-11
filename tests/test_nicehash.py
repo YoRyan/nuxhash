@@ -1,14 +1,13 @@
 from unittest import main, TestCase
 
-from nuxhash.daemon import DONATE_ADDRESS
+import nuxhash.nicehash as nh
 from nuxhash.settings import DEFAULT_SETTINGS
-from nuxhash.nicehash import get_request, post_request, api2_send
 
 
 class TestNHApi(TestCase):
 
     def test_get_request(self):
-        response = api2_send(get_request('exchangeRate', 'list'))
+        response = nh.send(nh.api2_get('exchangeRate', 'list'))
         self.assertIn('list', response)
 
         exchange = response['list'][0]
@@ -17,30 +16,20 @@ class TestNHApi(TestCase):
         self.assertIn('fromCurrency', exchange)
 
 
-class TestNHBalance(TestCase):
-
-    def test_balance(self):
-        balance = nicehash.unpaid_balance(DONATE_ADDRESS)
-        self.assertGreaterEqual(balance, 0.0)
-
-    def test_bad_address(self):
-        self.assertRaises(nicehash.APIError,
-                          lambda: nicehash.unpaid_balance('x'))
-
-
 class TestNHMultialgo(TestCase):
 
     def setUp(self):
-        settings = DEFAULT_SETTINGS
-        settings['nicehash']['region'] = 'eu'
-        self.payrates, self.stratums = nicehash.simplemultialgo_info(settings)
+        self.settings = DEFAULT_SETTINGS
+        self.settings['nicehash']['region'] = 'eu'
 
     def test_payrate(self):
-        self.assertGreater(self.payrates['cryptonight'], 0.0)
+        mbtc_per_hash = nh.simplemultialgo_info(self.settings)
+        self.assertGreater(mbtc_per_hash['cryptonight'], 0.0)
 
     def test_stratum(self):
-        self.assertEqual(self.stratums['cryptonight'],
-                         'cryptonight.eu.nicehash.com:3355')
+        stratums = nh.stratums(self.settings)
+        print(stratums)
+        self.assertIn('cryptonight.eu.nicehash.com', stratums['cryptonight'])
 
 if __name__ == '__main__':
     main()

@@ -28,17 +28,17 @@ class BadResponse(NicehashException):
         return 'Bad JSON response'
 
 
-def get_request(*path, **params):
+def api2_get(*path, **params):
     return Request('GET', f"{API2_ENDPOINT}{'/'.join(path)}",
                    params=params).prepare()
 
 
-def post_request(body, *path, **params):
+def api2_post(body, *path, **params):
     return Request('POST', f"{API2_ENDPOINT}{'/'.join(path)}",
                    data=body, params=params).prepare()
 
 
-def api2_send(prepped_request):
+def send(prepped_request):
     with Session() as session:
         response = session.send(prepped_request, timeout=TIMEOUT)
         try:
@@ -59,15 +59,16 @@ def unpaid_balance(address):
 
 
 def simplemultialgo_info(nx_settings):
-    response = api_call('simplemultialgo.info', [])
-    algorithms_info = response['simplemultialgo']
-    mbtc_per_hash = {algorithm['name']: (float(algorithm['paying'])
-                                         *1e-9) # GH -> H/s/day
-                     for algorithm in algorithms_info}
-    stratums = {algorithm['name']: '%s.%s.nicehash.com:%d'
-                % (algorithm['name'],
-                   nx_settings['nicehash']['region'],
-                   algorithm['port'])
-                for algorithm in algorithms_info}
-    return mbtc_per_hash, stratums
+    response = send(api2_get('public', 'simplemultialgo', 'info'))
+    pay_factor = 1e-9 # GH -> H/s/day
+    return {algorithm['algorithm'].lower(): float(algorithm['paying'])*pay_factor
+            for algorithm in response['miningAlgorithms']}
+
+def stratums(nx_settings):
+    response = send(api2_get('mining', 'algorithms'))
+    ports = {algorithm['algorithm'].lower(): algorithm['port']
+             for algorithm in response['miningAlgorithms']}
+    region = nx_settings['nicehash']['region']
+    return {algorithm: f'{algorithm}.{region}.nicehash.com:{port}'
+            for algorithm, port in ports.items()}
 
