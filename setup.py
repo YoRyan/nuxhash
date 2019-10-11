@@ -7,20 +7,20 @@ https://github.com/pypa/sampleproject
 
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-from os import path
+from pathlib import Path
 # io.open is needed for projects that support Python 2.7
 # It ensures open() defaults to text mode with universal newlines,
 # and accepts an argument to specify the text encoding
 # Python 3 only projects can skip this import
 #from io import open
 
-here = path.abspath(path.dirname(__file__))
+here = Path(__file__).parent.resolve()
 
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(here/'README.md') as f:
     long_description = f.read()
 
-with open(path.join(here, 'nuxhash', 'version.py')) as f:
+with open(here/'nuxhash'/'version.py') as f:
     exec(f.read())
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
@@ -87,7 +87,7 @@ setup(
 
     # This should be a valid email address corresponding to the author listed
     # above.
-    author_email='rayoung@utexas.edu',  # Optional
+    author_email='ryan@youngryan.com',  # Optional
 
     # Classifiers help users find your project by categorizing it.
     #
