@@ -4,18 +4,6 @@ import nuxhash.nicehash as nh
 from nuxhash.settings import DEFAULT_SETTINGS
 
 
-class TestNHApi(TestCase):
-
-    def test_get_request(self):
-        response = nh.send(nh.api2_get('exchangeRate', 'list'))
-        self.assertIn('list', response)
-
-        exchange = response['list'][0]
-        self.assertIn('exchangeRate', exchange)
-        self.assertIn('toCurrency', exchange)
-        self.assertIn('fromCurrency', exchange)
-
-
 class TestNHMultialgo(TestCase):
 
     def setUp(self):
