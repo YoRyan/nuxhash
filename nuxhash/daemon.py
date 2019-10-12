@@ -231,7 +231,6 @@ class MiningSession(object):
 
     PROFIT_PRIORITY = 1
     STOP_PRIORITY = 0
-    NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
     def __init__(self, miners, settings, benchmarks, devices):
         self._miners = miners
@@ -253,7 +252,7 @@ class MiningSession(object):
             try:
                 payrates = nicehash.simplemultialgo_info(self._settings)
                 stratums = nicehash.stratums(self._settings)
-            except MiningSession.NH_EXCEPTIONS as err:
+            except Exception as err:
                 logging.warning(f'NiceHash stats: {err}, retrying in 5 seconds')
                 time.sleep(5)
             else:
@@ -278,7 +277,7 @@ class MiningSession(object):
         # Get profitability information from NiceHash.
         try:
             ret_payrates = nicehash.simplemultialgo_info(self._settings)
-        except MiningSession.NH_EXCEPTIONS as err:
+        except Exception as err:
             logging.warning(f'NiceHash stats: {err}')
         else:
             self._payrates = (ret_payrates, datetime.now())
