@@ -14,9 +14,9 @@ class NvidiaDevice(object):
     def __ne__(self, other):
         return not self == other
     def __str__(self):
-        return 'nvidia_%s' % (self.uuid)
+        return f'nvidia_{self.uuid}'
     def __repr__(self):
-        return '<nvidia device %s: %s>' % (self.uuid, self.name)
+        return f'<nvidia device {self.uuid}: {self.name}>'
     def __hash__(self):
         return hash(self.uuid)
 

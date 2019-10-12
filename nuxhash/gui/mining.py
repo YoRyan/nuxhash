@@ -212,7 +212,8 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
         algorithms = list(speeds.keys())
         algorithms.sort(key=lambda algorithm: algorithm.name)
         for algorithm in algorithms:
-            algo = '%s\n(%s)' % (algorithm.name, ', '.join(algorithm.algorithms))
+            algo_sublist = ', '.join(algorithm.algorithms)
+            algo = f'{algorithm.name}\n({algo_sublist})'
             devicesStr = ','.join([DeviceListRenderer._DeviceToString(device)
                                    for device in devices[algorithm]])
             speed = ',\n'.join([utils.format_speed(speed)
@@ -243,7 +244,7 @@ class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
         tags = {
             'nvidia': 'N'
             }
-        return ','.join(['%s:%s' % (tags[device['vendor']], device['name'])
+        return ','.join([f"{tags[device['vendor']]}:{device['name']}"
                          for device in self._Devices])
 
     def GetSize(self):
@@ -290,7 +291,7 @@ class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
             name = name.replace('GTX', '')
             name = name.replace('RTX', '')
             name = name.strip()
-            return 'N:%s' % name
+            return f'N:{name}'
         else:
             raise Exception('bad device instance')
 
@@ -350,7 +351,7 @@ class MiningThread(threading.Thread):
         try:
             ret_payrates = nicehash.simplemultialgo_info(self._settings)
         except MiningThread.NH_EXCEPTIONS as err:
-            logging.warning('NiceHash stats: %s' % err)
+            logging.warning(f'NiceHash stats: {err}')
         else:
             self._payrates = (ret_payrates, datetime.now())
 

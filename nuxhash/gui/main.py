@@ -128,7 +128,7 @@ class DownloadThread(threading.Thread):
         for i, item in enumerate(self._downloads):
             sendMessage(
                 self._frame, 'download.progress',
-                progress=i/n_downloads, message='Downloading %s' % item.name)
+                progress=i/n_downloads, message=f'Downloading {item.name}')
             item.download()
             sendMessage(
                 self._frame, 'download.progress',

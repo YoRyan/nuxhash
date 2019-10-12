@@ -62,7 +62,7 @@ class BenchmarksScreen(wx.Panel):
         self._DeviceCp = {}
         for device in self._Devices:
             deviceCp = wx.CollapsiblePane(
-                innerWindow, label=('%s\n%s' % (device.name, device.uuid)),
+                innerWindow, label=f'{device.name}\n{device.uuid}',
                 style=wx.CP_NO_TLW_RESIZE)
             self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged,
                       deviceCp)
@@ -322,12 +322,12 @@ class SpeedCtrl(wx.TextCtrl):
 
     def SetWarmup(self, remaining):
         self.Disable()
-        self.ChangeValue('warming up (%d)%s' % (remaining, self._StatusDot()))
+        self.ChangeValue(f'warming up ({remaining}) {self._StatusDot()}')
 
     def SetBenchmark(self, values, remaining):
         self.Disable()
         s = '; '.join(utils.format_speed(speed).strip() for speed in values)
-        self.ChangeValue('%s (%d)%s' % (s, remaining, self._StatusDot()))
+        self.ChangeValue(f'{s} ({remaining}) {self._StatusDot()}')
 
     def _StatusDot(self):
         s = ''.join('.' if i == self._StatusPos else ' ' for i in range(3))

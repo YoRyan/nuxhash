@@ -135,9 +135,8 @@ class ExcavatorServer(object):
 
     def _subscribe(self):
         region, wallet, worker = self._subscription
-        self.send_command(
-            'subscribe', ['nhmp.%s.nicehash.com:%s' % (region, NHMP_PORT),
-                          '%s.%s:x' % (wallet, worker)])
+        self.send_command('subscribe', [f'nhmp.{region}.nicehash.com:{NHMP_PORT}',
+                                        f'{wallet}.{worker}:x'])
 
     def stop(self):
         """Stops excavator."""
@@ -221,8 +220,8 @@ class ExcavatorServer(object):
         # Create worker.
         device_id = self._device_map[device.pci_bus]
         if benchmarking:
-            response = self.send_command('worker.add', ['benchmark-%s' % algorithm,
-                                                        device_id])
+            response = self.send_command(
+                    'worker.add', [f'benchmark-{algorithm}', device_id])
         else:
             response = self.send_command('worker.add', [algorithm, device_id])
         self._running_workers[(algorithm, device)] = response['worker_id']
@@ -285,15 +284,15 @@ class ESAlgorithm(ESResource):
 
     def _create(self):
         if self._benchmark:
-            self._server.send_command('algorithm.add',
-                                      ['benchmark-%s' % self._algorithm])
+            self._server.send_command(
+                    'algorithm.add', [f'benchmark-{self._algorithm}'])
         else:
             self._server.send_command('algorithm.add', [self._algorithm])
 
     def _destroy(self):
         if self._benchmark:
-            self._server.send_command('algorithm.remove',
-                                      ['benchmark-%s' % self._algorithm])
+            self._server.send_command(
+                    'algorithm.remove', [f'benchmark-{self._algorithm}'])
         else:
             self._server.send_command('algorithm.remove', [self._algorithm])
 
@@ -303,7 +302,7 @@ class ExcavatorAlgorithm(miner.Algorithm):
     def __init__(self, parent, excavator_algorithm, **kwargs):
         algorithms = excavator_algorithm.lower().split('_')
         miner.Algorithm.__init__(
-            self, parent, name='excavator_%s' % excavator_algorithm,
+            self, parent, name=f'excavator_{excavator_algorithm}',
             algorithms=algorithms, **kwargs)
         self._excavator_algorithm = excavator_algorithm
         self._devices = []

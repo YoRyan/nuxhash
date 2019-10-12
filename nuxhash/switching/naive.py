@@ -18,17 +18,17 @@ class NaiveSwitcher(ProfitSwitcher):
             stay_algo = self.last_decision[device]
 
             if stay_algo is None:
-                logging.info('Assigning %s to %s (%.3f mBTC/day)'
-                             % (device, switch_algo.name, switch_revenue*1e3))
+                logging.info(f'Assigning {device} to {switch_algo.name} '
+                             + f'({round(switch_revenue, ndigits=3)} mBTC/day)')
                 decision[device] = switch_algo
             elif switch_algo != stay_algo:
                 stay_revenue = revenues[stay_algo]
                 min_factor = 1.0 + self.settings['switching']['threshold']
 
                 if stay_revenue != 0.0 and switch_revenue/stay_revenue >= min_factor:
-                    logging.info('Switching %s from %s to %s (%.3f -> %.3f mBTC/day)'
-                                 % (device, stay_algo.name, switch_algo.name,
-                                    stay_revenue, switch_revenue))
+                    logging.info(f'Switching {device} from {stay_algo.name} '
+                                 + f'to {switch_algo.name} ({stay_revenue:.3f} '
+                                 + f'-> {switch_revenue:.3f} mBTC/day)')
                     decision[device] = switch_algo
                 else:
                     decision[device] = stay_algo

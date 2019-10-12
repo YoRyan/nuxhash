@@ -30,7 +30,7 @@ class AboutScreen(wx.Panel):
 
         v_sizer.AddSpacer(15)
 
-        appName = wx.StaticText(self, label='nuxhash %s' % __version__,
+        appName = wx.StaticText(self, label=f'nuxhash {__version__}',
                                 style=wx.ALIGN_CENTER)
         appName.SetFont(self.GetFont().Scale(2.0))
         v_sizer.Add(appName, wx.SizerFlags().Expand())
