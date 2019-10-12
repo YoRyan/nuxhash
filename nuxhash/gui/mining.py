@@ -26,7 +26,6 @@ MINING_UPDATE_SECS = 5
 BALANCE_UPDATE_MIN = 5
 NVIDIA_COLOR = (66, 244, 69)
 DONATE_PROB = 0.005
-NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
 
 class MiningScreen(wx.Panel):
@@ -301,6 +300,7 @@ class MiningThread(threading.Thread):
     PROFIT_PRIORITY = 1
     STATUS_PRIORITY = 2
     STOP_PRIORITY = 0
+    NH_EXCEPTIONS = (ConnectionError, IOError, OSError, nicehash.NicehashException)
 
     def __init__(self, devices=[], window=None,
                  settings=DEFAULT_SETTINGS, benchmarks=EMPTY_BENCHMARKS):
@@ -321,7 +321,7 @@ class MiningThread(threading.Thread):
             try:
                 payrates = nicehash.simplemultialgo_info(self._settings)
                 stratums = nicehash.stratums(self._settings)
-            except NH_EXCEPTIONS as err:
+            except MiningThread.NH_EXCEPTIONS as err:
                 logging.warning(f'NiceHash stats: {err}, retrying in 5 seconds')
                 time.sleep(5)
             else:
@@ -349,7 +349,7 @@ class MiningThread(threading.Thread):
         # Get profitability information from NiceHash.
         try:
             ret_payrates = nicehash.simplemultialgo_info(self._settings)
-        except NH_EXCEPTIONS as err:
+        except MiningThread.NH_EXCEPTIONS as err:
             logging.warning('NiceHash stats: %s' % err)
         else:
             self._payrates = (ret_payrates, datetime.now())
