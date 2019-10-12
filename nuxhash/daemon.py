@@ -252,9 +252,10 @@ class MiningSession(object):
         payrates = stratums = None
         while payrates is None:
             try:
-                payrates, stratums = nicehash.simplemultialgo_info(self._settings)
+                payrates = nicehash.simplemultialgo_info(self._settings)
+                stratums = nicehash.stratums(self._settings)
             except NH_EXCEPTIONS as err:
-                logging.warning('NiceHash stats: %s, retrying in 5 seconds' % err)
+                logging.warning(f'NiceHash stats: {err}, retrying in 5 seconds')
                 time.sleep(5)
             else:
                 self._payrates = (payrates, datetime.now())
@@ -277,7 +278,7 @@ class MiningSession(object):
     def _switch_algos(self):
         # Get profitability information from NiceHash.
         try:
-            ret_payrates, stratums = nicehash.simplemultialgo_info(self._settings)
+            ret_payrates = nicehash.simplemultialgo_info(self._settings)
         except NH_EXCEPTIONS as err:
             logging.warning('NiceHash stats: %s' % err)
         else:
