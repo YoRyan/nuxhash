@@ -291,9 +291,9 @@ class MiningSession(object):
         def revenue(device, algorithm):
             benchmarks = self._benchmarks[device]
             if algorithm.name in benchmarks:
-                return sum([payrates[algorithm.algorithms[i]]
-                            *benchmarks[algorithm.name][i]
-                            for i in range(len(algorithm.algorithms))])
+                return sum([payrates[sub_algo]*benchmarks[algorithm.name][i]
+                            if sub_algo in payrates else 0.0
+                            for i, sub_algo in enumerate(algorithm.algorithms)])
             else:
                 return 0.0
         revenues = {device: {algorithm: revenue(device, algorithm)
