@@ -28,7 +28,6 @@ class TestNHMultialgo(TestCase):
 
     def test_stratum(self):
         stratums = nh.stratums(self.settings)
-        print(stratums)
         self.assertIn('cryptonight.eu.nicehash.com', stratums['cryptonight'])
 
 if __name__ == '__main__':
