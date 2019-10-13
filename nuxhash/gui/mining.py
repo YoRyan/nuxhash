@@ -17,7 +17,7 @@ from nuxhash.daemon import DONATE_ADDRESS
 from nuxhash.devices.nvidia import NvidiaDevice
 from nuxhash.gui import main
 from nuxhash.miners import all_miners
-from nuxhash.nicehash import unpaid_balance
+from nuxhash.nicehash import get_balances
 from nuxhash.settings import DEFAULT_SETTINGS, EMPTY_BENCHMARKS
 from nuxhash.switching.naive import NaiveSwitcher
 
@@ -45,7 +45,7 @@ class MiningScreen(wx.Panel):
 
         pub.subscribe(self._OnClose, 'app.close')
 
-        pub.subscribe(self._OnNewUnpaidBalance, 'nicehash.unpaid')
+        pub.subscribe(self._OnNewBalances, 'nicehash.balances')
         pub.subscribe(self._OnMiningStatus, 'mining.status')
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
@@ -78,11 +78,11 @@ class MiningScreen(wx.Panel):
         self._Revenue.SetFont(self.GetFont().Bold())
         balances.Add(self._Revenue, wx.SizerFlags().Expand())
 
-        balances.Add(wx.StaticText(self, label='Unpaid mining balance'))
-        self._Unpaid = wx.StaticText(
+        balances.Add(wx.StaticText(self, label='Balance (unpaid)'))
+        self._Balances = wx.StaticText(
             self, style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
-        self._Unpaid.SetFont(self.GetFont().Bold())
-        balances.Add(self._Unpaid, wx.SizerFlags().Expand())
+        self._Balances.SetFont(self.GetFont().Bold())
+        balances.Add(self._Balances, wx.SizerFlags().Expand())
 
         bottomSizer.AddSpacer(main.PADDING_PX)
 
@@ -137,12 +137,13 @@ class MiningScreen(wx.Panel):
         address = self._Settings['nicehash']['wallet']
         if check_bc(address):
             def do_requests(address, target):
-                unpaid = unpaid_balance(address)
-                main.sendMessage(target, 'nicehash.unpaid', balance=unpaid)
+                wallet, unpaid = get_balances(self._Settings)
+                main.sendMessage(target, 'nicehash.balances',
+                                 wallet=wallet, unpaid=unpaid)
             thread = threading.Thread(target=do_requests, args=(address, self))
             thread.start()
         else:
-            pub.sendMessage('nicehash.unpaid', balance=None)
+            pub.sendMessage('nicehash.balances', wallet=None, unpaid=None)
 
     def OnStartStop(self, event):
         if not self._Thread:
@@ -166,12 +167,18 @@ class MiningScreen(wx.Panel):
         self._Thread.stop()
         self._Thread = None
 
-    def _OnNewUnpaidBalance(self, balance):
-        if balance is None:
-            self._Unpaid.SetLabel('')
-        else:
+    def _OnNewBalances(self, wallet, unpaid):
+        if unpaid is not None:
             unit = self._Settings['gui']['units']
-            self._Unpaid.SetLabel(utils.format_balance(balance, unit))
+            unpaid_str = utils.format_balance(unpaid, unit)
+            if wallet is not None:
+                wallet_str = utils.format_balance(balance, unit)
+                label = f'{wallet_str} ({unpaid_str})'
+            else:
+                label = f'api keys required ({unpaid_str})'
+        else:
+            label = ''
+        self._Balances.SetLabel(label)
 
     def _OnMiningStatus(self, speeds, revenue, devices):
         totalRevenue = sum(revenue.values())

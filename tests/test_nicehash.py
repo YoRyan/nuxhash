@@ -20,13 +20,6 @@ class TestNHMultialgo(TestCase):
         self.assertIn('cryptonight.eu.nicehash.com', stratums['cryptonight'])
 
 
-class TestNHBalances(TestCase):
-
-    def test_unpaid_balance(self):
-        balance = nh.unpaid_balance(DONATE_ADDRESS)
-        self.assertGreaterEqual(balance, 0.0)
-
-
 if __name__ == '__main__':
     main()
 

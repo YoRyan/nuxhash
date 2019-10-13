@@ -20,9 +20,26 @@ def stratums(nx_settings):
     return {algorithm: f'{algorithm}.{region}.nicehash.com:{port}'
             for algorithm, port in ports.items()}
 
-def unpaid_balance(address):
-    api = nh.public_api(HOST)
-    response = api.request(
+def get_balances(nx_settings):
+    address = nx_settings['nicehash']['wallet']
+
+    response = nh.public_api(HOST).request(
             'GET', f'/main/api/v2/mining/external/{address}/rigs/', '', None)
-    return float(response['unpaidAmount'])
+    unpaid = response.get('unpaidAmount', None)
+    if response.get('externalAddress', True):
+        wallet = response.get('externalBalance', None)
+    else:
+        try:
+            response = nh.private_api(HOST,
+                                      nx_settings['nicehash']['api_organization'],
+                                      nx_settings['nicehash']['api_key'],
+                                      nx_settings['nicehash']['api_secret']) \
+                    .get_accounts_for_currency('BTC')
+        except:
+            wallet = None
+        else:
+            wallet = response.get('balance', None)
+
+    def float_if_valid(v): return None if v is None else float(v)
+    return float_if_valid(wallet), float_if_valid(unpaid)
 
