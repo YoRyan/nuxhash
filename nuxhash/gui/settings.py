@@ -3,6 +3,7 @@ from functools import wraps
 
 import wx
 from wx.lib.pubsub import pub
+from wx.lib.agw.hyperlink import HyperLinkCtrl
 
 from nuxhash import settings
 from nuxhash.bitcoin import check_bc
@@ -26,7 +27,7 @@ class SettingsScreen(wx.Panel):
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
-        def divider(sizer):
+        def add_divider(sizer):
             sizer.Add(wx.StaticLine(self), wx.SizerFlags().Expand())
 
         # Add basic setting controls.
@@ -60,37 +61,53 @@ class SettingsScreen(wx.Panel):
         basicSizer.Add(
             self._Region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        divider(sizer)
+        add_divider(sizer)
 
         # Add API key controls.
-        apiForm = wx.Window(self)
-        sizer.Add(apiForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
-                                          .Expand())
-        apiSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
-        apiSizer.AddGrowableCol(1)
-        apiForm.SetSizer(apiSizer)
+        apiCollapsible = wx.CollapsiblePane(
+                self, label='API Keys', style=wx.CP_NO_TLW_RESIZE)
+        self.Bind(
+                wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, apiCollapsible)
+        sizer.Add(apiCollapsible, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+                                                 .Expand())
+        apiPane = apiCollapsible.GetPane()
+        apiPaneSizer = wx.BoxSizer(orient=wx.VERTICAL)
+        apiPane.SetSizer(apiPaneSizer)
 
-        apiSizer.Add(wx.StaticText(apiForm, label='Organization ID'),
-                     wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self._Organization = wx.TextCtrl(apiForm, size=(200, -1))
-        apiSizer.Add(self._Organization,
-                wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        apiForm = wx.Window(apiPane)
+        apiPaneSizer.Add(apiForm, wx.SizerFlags().Expand())
+        apiFormSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
+        apiFormSizer.AddGrowableCol(1)
+        apiForm.SetSizer(apiFormSizer)
 
-        apiSizer.Add(wx.StaticText(apiForm, label='API Key Code'),
-                     wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        apiFormSizer.Add(wx.StaticText(apiForm, label='Organization ID'),
+                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._Organization = wx.TextCtrl(apiForm, size=(-1, -1))
+        apiFormSizer.Add(self._Organization,
+                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
+
+        apiFormSizer.Add(wx.StaticText(apiForm, label='API Key Code'),
+                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self._ApiKey = wx.TextCtrl(
-                apiForm, size=(200, -1), style=wx.TE_PASSWORD)
-        apiSizer.Add(self._ApiKey,
-                wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+                apiForm, size=(-1, -1), style=wx.TE_PASSWORD)
+        apiFormSizer.Add(self._ApiKey,
+                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
 
-        apiSizer.Add(wx.StaticText(apiForm, label='API Secret Key Code'),
-                     wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        apiFormSizer.Add(wx.StaticText(apiForm, label='API Secret Key Code'),
+                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self._ApiSecret = wx.TextCtrl(
-                apiForm, size=(200, -1), style=wx.TE_PASSWORD)
-        apiSizer.Add(self._ApiSecret,
-                wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+                apiForm, size=(-1, -1), style=wx.TE_PASSWORD)
+        apiFormSizer.Add(self._ApiSecret,
+                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
 
-        divider(sizer)
+        apiPaneSizer.AddSpacer(main.PADDING_PX)
+
+        apiLink = HyperLinkCtrl(
+                apiPane, label='(Get keys here)',
+                URL='https://www.nicehash.com/my/settings/keys')
+        apiPaneSizer.Add(apiLink, wx.SizerFlags().Expand())
+
+        add_divider(sizer)
 
         # Add advanced setting controls.
         advancedForm = wx.Window(self)
@@ -183,6 +200,9 @@ class SettingsScreen(wx.Panel):
     @_ChangeEvent
     def OnUnitsChange(self, event):
         self._NewSettings['gui']['units'] = UNITS[event.GetSelection()]
+
+    def OnPaneChanged(self, event):
+        self.Layout()
 
     def OnRevert(self, event):
         self._Reset()
