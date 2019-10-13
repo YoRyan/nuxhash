@@ -14,6 +14,9 @@ DEFAULT_SETTINGS = {
         'wallet': '',
         'workername': 'nuxhash',
         'region': 'usa',
+        'api_organization': '',
+        'api_key': '',
+        'api_code': ''
         },
     'switching': {
         'interval': 60,
@@ -36,32 +39,45 @@ EMPTY_BENCHMARKS = defaultdict(lambda: {})
 def read_settings_from_file(fd):
     parser = configparser.ConfigParser()
     parser.read_file(fd)
-    def get_option(parser_method, section, option):
-        try:
-            return parser_method(section, option)
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            return DEFAULT_SETTINGS[section][option]
-    return {
+    methods = {
         'nicehash': {
-            'wallet': get_option(parser.get, 'nicehash', 'wallet'),
-            'workername': get_option(parser.get, 'nicehash', 'workername'),
-            'region': get_option(parser.get, 'nicehash', 'region')
+            'wallet': parser.get,
+            'workername': parser.get,
+            'region': parser.get,
+            'api_organization': parser.get,
+            'api_key': parser.get,
+            'api_code': parser.get
             },
         'switching': {
-            'interval': get_option(parser.getint, 'switching', 'interval'),
-            'threshold': get_option(parser.getfloat, 'switching', 'threshold')
+            'interval': parser.getint,
+            'threshold': parser.getfloat
             },
         'gui': {
-            'units': get_option(parser.get, 'gui', 'units')
+            'units': parser.get
             },
         'donate': {
-            'optout': get_option(parser.getboolean, 'donate', 'optout')
+            'optout': parser.getboolean
             },
         'excavator_miner': {
-            'listen': get_option(parser.get, 'excavator_miner', 'listen'),
-            'args': get_option(parser.get, 'excavator_miner', 'args')
+            'listen': parser.get,
+            'args': parser.get
             }
         }
+    def read_options(data, *sections):
+        if isinstance(data, dict):
+            return {key: read_options(item, *(sections + (key,)))
+                    for key, item in data.items()}
+        elif callable(data):
+            try:
+                return data(*sections)
+            except (configparser.NoSectionError, configparser.NoOptionError):
+                value = DEFAULT_SETTINGS
+                for key in sections:
+                    value = value[key]
+                return value
+        else:
+            raise ValueError
+    return read_options(methods)
 
 
 def write_settings_to_file(fd, settings):

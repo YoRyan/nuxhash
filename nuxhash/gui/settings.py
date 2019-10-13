@@ -26,6 +26,9 @@ class SettingsScreen(wx.Panel):
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
+        def Divider():
+            return wx.StaticLine(self), wx.SizerFlags().Expand())
+
         # Add basic setting controls.
         basicForm = wx.Window(self)
         sizer.Add(basicForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
@@ -57,8 +60,37 @@ class SettingsScreen(wx.Panel):
         basicSizer.Add(
             self._Region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        # Add divider.
-        sizer.Add(wx.StaticLine(self), wx.SizerFlags().Expand())
+        sizer.Add(Divider())
+
+        # Add API key controls.
+        apiForm = wx.Window(self)
+        sizer.Add(apiForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
+                                          .Expand())
+        apiSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
+        apiSizer.AddGrowableCol(1)
+        apiForm.SetSizer(apiSizer)
+
+        apiSizer.Add(wx.StaticText(apiForm, label='Organization ID'),
+                     wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._Organization = wx.TextCtrl(apiForm, size=(200, -1))
+        apiSizer.Add(self._Organization,
+                wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+
+        apiSizer.Add(wx.StaticText(apiForm, label='API Key Code'),
+                     wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._ApiKey = wx.TextCtrl(
+                apiForm, size=(200, -1), style=wx.TE_PASSWORD)
+        apiSizer.Add(self._ApiKey,
+                wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+
+        apiSizer.Add(wx.StaticText(apiForm, label='API Secret Key Code'),
+                     wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self._ApiSecret = wx.TextCtrl(
+                apiForm, size=(200, -1), style=wx.TE_PASSWORD)
+        apiSizer.Add(self._ApiSecret,
+                wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+
+        sizer.Add(Divider())
 
         # Add advanced setting controls.
         advancedForm = wx.Window(self)
@@ -96,7 +128,6 @@ class SettingsScreen(wx.Panel):
         advancedSizer.Add(
             self._Units, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        # Add spacer.
         sizer.AddStretchSpacer()
 
         # Add revert/save controls.
