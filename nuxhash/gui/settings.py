@@ -26,8 +26,8 @@ class SettingsScreen(wx.Panel):
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(sizer)
 
-        def Divider():
-            return wx.StaticLine(self), wx.SizerFlags().Expand())
+        def divider(sizer):
+            sizer.Add(wx.StaticLine(self), wx.SizerFlags().Expand())
 
         # Add basic setting controls.
         basicForm = wx.Window(self)
@@ -60,7 +60,7 @@ class SettingsScreen(wx.Panel):
         basicSizer.Add(
             self._Region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        sizer.Add(Divider())
+        divider(sizer)
 
         # Add API key controls.
         apiForm = wx.Window(self)
@@ -90,7 +90,7 @@ class SettingsScreen(wx.Panel):
         apiSizer.Add(self._ApiSecret,
                 wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
 
-        sizer.Add(Divider())
+        divider(sizer)
 
         # Add advanced setting controls.
         advancedForm = wx.Window(self)
