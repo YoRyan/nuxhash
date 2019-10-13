@@ -20,6 +20,9 @@ def stratums(nx_settings):
     return {algorithm: f'{algorithm}.{region}.nicehash.com:{port}'
             for algorithm, port in ports.items()}
 
-def unpaid_balance(nx_settings, address):
-    return None
+def unpaid_balance(address):
+    api = nh.public_api(HOST)
+    response = api.request(
+            'GET', f'/main/api/v2/mining/external/{address}/rigs/', '', None)
+    return float(response['unpaidAmount'])
 
