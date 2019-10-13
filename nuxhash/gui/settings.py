@@ -172,6 +172,10 @@ class SettingsScreen(wx.Panel):
         new_settings['nicehash']['wallet'] = self._Wallet.GetValue()
         new_settings['nicehash']['workername'] = self._Worker.GetValue()
         new_settings['nicehash']['region'] = REGIONS[self._Region.GetSelection()]
+        new_settings['nicehash']['api_organization'] = \
+                self._Organization.GetValue()
+        new_settings['nicehash']['api_key'] = self._ApiKey.GetValue()
+        new_settings['nicehash']['api_secret'] = self._ApiSecret.GetValue()
         new_settings['switching']['interval'] = self._Interval.GetValue()
         new_settings['switching']['threshold'] = self._Threshold.GetValue()/100.0
         new_settings['gui']['units'] = UNITS[self._Units.GetSelection()]
@@ -184,6 +188,9 @@ class SettingsScreen(wx.Panel):
         self._Wallet.SetValue(self._Settings['nicehash']['wallet'])
         self._Worker.SetValue(self._Settings['nicehash']['workername'])
         self._Region.SetValue(self._Settings['nicehash']['region'])
+        self._Organization.SetValue(self._Settings['nicehash']['api_organization'])
+        self._ApiKey.SetValue(self._Settings['nicehash']['api_key'])
+        self._ApiSecret.SetValue(self._Settings['nicehash']['api_secret'])
         self._Interval.SetValue(self._Settings['switching']['interval'])
         self._Threshold.SetValue(self._Settings['switching']['threshold']*100)
         self._Units.SetValue(self._Settings['gui']['units'])
