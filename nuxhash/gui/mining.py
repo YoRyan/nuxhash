@@ -172,7 +172,7 @@ class MiningScreen(wx.Panel):
             unit = self._Settings['gui']['units']
             unpaid_str = utils.format_balance(unpaid, unit)
             if wallet is not None:
-                wallet_str = utils.format_balance(balance, unit)
+                wallet_str = utils.format_balance(wallet, unit)
                 label = f'{wallet_str} ({unpaid_str})'
             else:
                 label = f'api keys required ({unpaid_str})'
