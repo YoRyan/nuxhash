@@ -16,7 +16,7 @@ DEFAULT_SETTINGS = {
         'region': 'usa',
         'api_organization': '',
         'api_key': '',
-        'api_code': ''
+        'api_secret': ''
         },
     'switching': {
         'interval': 60,
@@ -46,7 +46,7 @@ def read_settings_from_file(fd):
             'region': parser.get,
             'api_organization': parser.get,
             'api_key': parser.get,
-            'api_code': parser.get
+            'api_secret': parser.get
             },
         'switching': {
             'interval': parser.getint,

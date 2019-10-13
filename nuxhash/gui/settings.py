@@ -30,38 +30,37 @@ class SettingsScreen(wx.Panel):
         def add_divider(sizer):
             sizer.Add(wx.StaticLine(self), wx.SizerFlags().Expand())
 
+        def add_valign(sizer, window, sizerflags=wx.SizerFlags()):
+            sizer.Add(window, sizerflags.Align(wx.ALIGN_CENTER_VERTICAL))
+
+        def two_col_sizer(rows):
+            sizer = wx.FlexGridSizer(rows, 2, main.PADDING_PX, main.PADDING_PX)
+            sizer.AddGrowableCol(1)
+            return sizer
+
         # Add basic setting controls.
         basicForm = wx.Window(self)
         sizer.Add(basicForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
                                             .Expand())
-        basicSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
-        basicSizer.AddGrowableCol(1)
+        basicSizer = two_col_sizer(3)
         basicForm.SetSizer(basicSizer)
 
-        basicSizer.Add(wx.StaticText(basicForm, label='Wallet address'),
-                       wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(basicSizer, wx.StaticText(basicForm, label='Wallet address'))
         self._Wallet = AddressCtrl(basicForm, size=(-1, -1))
         self.Bind(wx.EVT_TEXT, self.OnWalletChange, self._Wallet)
-        basicSizer.Add(
-            self._Wallet, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
+        add_valign(basicSizer, self._Wallet, wx.SizerFlags().Expand())
 
-        basicSizer.Add(wx.StaticText(basicForm, label='Worker name'),
-                       wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(basicSizer, wx.StaticText(basicForm, label='Worker name'))
         self._Worker = wx.TextCtrl(basicForm, size=(200, -1))
         self.Bind(wx.EVT_TEXT, self.OnWorkerChange, self._Worker)
-        basicSizer.Add(
-            self._Worker, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(basicSizer, self._Worker)
 
-        basicSizer.Add(wx.StaticText(basicForm, label='Region'),
-                       wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(basicSizer, wx.StaticText(basicForm, label='Region'))
         self._Region = ChoiceByValue(
             basicForm, choices=REGIONS,
             fallbackChoice=settings.DEFAULT_SETTINGS['nicehash']['region'])
         self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self._Region)
-        basicSizer.Add(
-            self._Region, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-
-        add_divider(sizer)
+        add_valign(basicSizer, self._Region)
 
         # Add API key controls.
         apiCollapsible = wx.CollapsiblePane(
@@ -73,32 +72,25 @@ class SettingsScreen(wx.Panel):
         apiPane = apiCollapsible.GetPane()
         apiPaneSizer = wx.BoxSizer(orient=wx.VERTICAL)
         apiPane.SetSizer(apiPaneSizer)
-
         apiForm = wx.Window(apiPane)
         apiPaneSizer.Add(apiForm, wx.SizerFlags().Expand())
-        apiFormSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
-        apiFormSizer.AddGrowableCol(1)
+        apiFormSizer = two_col_sizer(3)
         apiForm.SetSizer(apiFormSizer)
 
-        apiFormSizer.Add(wx.StaticText(apiForm, label='Organization ID'),
-                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(apiFormSizer, wx.StaticText(apiForm, label='Organization ID'))
         self._Organization = wx.TextCtrl(apiForm, size=(-1, -1))
-        apiFormSizer.Add(self._Organization,
-                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
+        add_valign(apiFormSizer, self._Organization, wx.SizerFlags().Expand())
 
-        apiFormSizer.Add(wx.StaticText(apiForm, label='API Key Code'),
-                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(apiFormSizer, wx.StaticText(apiForm, label='API Key Code'))
         self._ApiKey = wx.TextCtrl(
                 apiForm, size=(-1, -1), style=wx.TE_PASSWORD)
-        apiFormSizer.Add(self._ApiKey,
-                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
+        add_valign(apiFormSizer, self._ApiKey, wx.SizerFlags().Expand())
 
-        apiFormSizer.Add(wx.StaticText(apiForm, label='API Secret Key Code'),
-                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(apiFormSizer,
+                   wx.StaticText(apiForm, label='API Secret Key Code'))
         self._ApiSecret = wx.TextCtrl(
                 apiForm, size=(-1, -1), style=wx.TE_PASSWORD)
-        apiFormSizer.Add(self._ApiSecret,
-                         wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Expand())
+        add_valign(apiFormSizer, self._ApiSecret, wx.SizerFlags().Expand())
 
         apiPaneSizer.AddSpacer(main.PADDING_PX)
 
@@ -113,37 +105,31 @@ class SettingsScreen(wx.Panel):
         advancedForm = wx.Window(self)
         sizer.Add(advancedForm, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
                                                .Expand())
-        advancedSizer = wx.FlexGridSizer(3, 2, main.PADDING_PX, main.PADDING_PX)
-        advancedSizer.AddGrowableCol(1)
+        advancedSizer = two_col_sizer(3)
         advancedForm.SetSizer(advancedSizer)
 
-        advancedSizer.Add(
-            wx.StaticText(advancedForm, label='Update interval (secs)'),
-            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(advancedSizer,
+                   wx.StaticText(advancedForm, label='Update interval (secs)'))
         self._Interval = wx.SpinCtrl(advancedForm, size=(125, -1),
                                      min=10, max=300, initial=60)
         self.Bind(wx.EVT_SPINCTRL, self.OnIntervalChange, self._Interval)
-        advancedSizer.Add(
-            self._Interval, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(advancedSizer, self._Interval)
 
-        advancedSizer.Add(
-            wx.StaticText(advancedForm, label='Profitability switch threshold (%)'),
-            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(advancedSizer,
+                   wx.StaticText(advancedForm,
+                                 label='Profitability switch threshold (%)'))
         self._Threshold = wx.SpinCtrl(advancedForm, size=(125, -1),
                                       min=1, max=50, initial=10)
         self.Bind(wx.EVT_SPINCTRL, self.OnThresholdChange, self._Threshold)
-        advancedSizer.Add(
-            self._Threshold, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(advancedSizer, self._Threshold)
 
-        advancedSizer.Add(
-            wx.StaticText(advancedForm, label='Display units'),
-            wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(advancedSizer,
+                   wx.StaticText(advancedForm, label='Display units'))
         self._Units = ChoiceByValue(
             advancedForm, choices=UNITS,
             fallbackChoice=settings.DEFAULT_SETTINGS['gui']['units'])
         self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self._Units)
-        advancedSizer.Add(
-            self._Units, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        add_valign(advancedSizer, self._Units)
 
         sizer.AddStretchSpacer()
 

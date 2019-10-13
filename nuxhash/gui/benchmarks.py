@@ -260,9 +260,9 @@ class BenchmarkThread(threading.Thread):
         for target in self._targets:
             def report(sample, secs_remaining):
                 main.sendMessage(
-                    self._window, 'benchmarking.status',
-                    target=target, speeds=sample, time=abs(secs_remaining),
-                    warmup=(secs_remaining < 0))
+                        self._window, 'benchmarking.status',
+                        target=target, speeds=sample, time=abs(secs_remaining),
+                        warmup=(secs_remaining < 0))
             device, algorithm = target
             speeds = utils.run_benchmark(
                 algorithm, device, algorithm.warmup_secs, BENCHMARK_SECS,
@@ -306,9 +306,9 @@ class Item(object):
 class SpeedCtrl(wx.TextCtrl):
 
     def __init__(self, parent, *args, **kwargs):
-        wx.StaticText.__init__(self, parent, *args,
-                               style=wx.BORDER_NONE|wx.TE_CENTRE,
-                               size=(-1, 20), **kwargs)
+        wx.StaticText.__init__(
+                self, parent, *args, style=wx.BORDER_NONE|wx.TE_CENTRE,
+                size=(-1, 20), **kwargs)
         self._StatusPos = 0
         self.Bind(wx.EVT_KILL_FOCUS, self._OnUnfocus)
 
@@ -317,7 +317,8 @@ class SpeedCtrl(wx.TextCtrl):
         if all(speed == 0.0 for speed in values):
             s = '--'
         else:
-            s = '; '.join(utils.format_speed(speed).strip() for speed in values)
+            speeds = (utils.format_speed(speed).strip() for speed in values)
+            s = '; '.join(speeds)
         self.ChangeValue(s)
 
     def SetWarmup(self, remaining):

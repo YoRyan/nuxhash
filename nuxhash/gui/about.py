@@ -4,7 +4,7 @@ from pathlib import Path
 import wx
 from wx.lib.agw.hyperlink import HyperLinkCtrl
 
-from nuxhash.version import __version__
+from nuxhash.version import __copyright__, __version__
 
 
 WEBSITE = 'https://github.com/YoRyan/nuxhash'
@@ -30,8 +30,8 @@ class AboutScreen(wx.Panel):
 
         v_sizer.AddSpacer(15)
 
-        appName = wx.StaticText(self, label=f'nuxhash {__version__}',
-                                style=wx.ALIGN_CENTER)
+        appName = wx.StaticText(
+                self, label=f'nuxhash {__version__}', style=wx.ALIGN_CENTER)
         appName.SetFont(self.GetFont().Scale(2.0))
         v_sizer.Add(appName, wx.SizerFlags().Expand())
 
@@ -43,8 +43,7 @@ class AboutScreen(wx.Panel):
 
         v_sizer.AddSpacer(15)
 
-        copyright = wx.StaticText(self, label='Copyright © 2018\nRyan Young',
-                                  style=wx.ALIGN_CENTER)
+        copyright = wx.StaticText(self, label=__copyright__, style=wx.ALIGN_CENTER)
         copyright.SetFont(self.GetFont().Scale(0.8))
         v_sizer.Add(copyright, wx.SizerFlags().Expand())
 

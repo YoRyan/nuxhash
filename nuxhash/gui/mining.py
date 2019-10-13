@@ -53,7 +53,7 @@ class MiningScreen(wx.Panel):
 
         # Update balance periodically.
         self._Timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, lambda event: self._UpdateBalance(), self._Timer)
+        self.Bind(wx.EVT_TIMER, self._OnBalanceTimer, self._Timer)
         self._Timer.Start(milliseconds=BALANCE_UPDATE_MIN*60*1e3)
 
         # Add mining panel.
@@ -130,6 +130,9 @@ class MiningScreen(wx.Panel):
         if self._Thread:
             self._Thread.stop()
 
+    def _OnBalanceTimer(self, event):
+        self._UpdateBalance()
+
     def _UpdateBalance(self):
         address = self._Settings['nicehash']['wallet']
         if check_bc(address):
@@ -150,10 +153,10 @@ class MiningScreen(wx.Panel):
     def _StartMining(self):
         pub.sendMessage('mining.start')
         self._StartStop.SetLabel('Stop Mining')
-        self._Thread = MiningThread(devices=self._Devices,
-                                    window=self,
-                                    settings=deepcopy(self._Settings),
-                                    benchmarks=deepcopy(self._Benchmarks))
+        self._Thread = MiningThread(
+                devices=self._Devices, window=self,
+                settings=deepcopy(self._Settings),
+                benchmarks=deepcopy(self._Benchmarks))
         self._Thread.start()
 
     def _StopMining(self):
@@ -184,10 +187,10 @@ class MiningPanel(wx.dataview.DataViewListCtrl):
         self.Disable()
         self.AppendTextColumn('Algorithm', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendColumn(
-            wx.dataview.DataViewColumn('Devices', DeviceListRenderer(),
-                                       1, align=wx.ALIGN_LEFT,
-                                       width=wx.COL_WIDTH_AUTOSIZE),
-            'string')
+                wx.dataview.DataViewColumn('Devices', DeviceListRenderer(),
+                                           1, align=wx.ALIGN_LEFT,
+                                           width=wx.COL_WIDTH_AUTOSIZE),
+                'string')
         self.AppendTextColumn('Speed', width=wx.COL_WIDTH_AUTOSIZE)
         self.AppendTextColumn('Revenue')
 
@@ -233,32 +236,28 @@ class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
         self._ColorDb = wx.ColourDatabase()
 
     def SetValue(self, value):
-        vendors = {
-            'N': 'nvidia'
-            }
+        vendors = { 'N': 'nvidia' }
         self._Devices = [{ 'name': s[2:], 'vendor': vendors[s[0]] }
                          for s in value.split(',')]
         return True
 
     def GetValue(self):
-        tags = {
-            'nvidia': 'N'
-            }
+        tags = { 'nvidia': 'N' }
         return ','.join([f"{tags[device['vendor']]}:{device['name']}"
                          for device in self._Devices])
 
     def GetSize(self):
         boxes = [self.GetTextExtent(device['name']) for device in self._Devices]
-        return wx.Size((max(box.GetWidth() for box in boxes)
-                        + DeviceListRenderer.CORNER_RADIUS*2),
+        RADIUS = DeviceListRenderer.CORNER_RADIUS
+        return wx.Size(max(box.GetWidth() for box in boxes) + RADIUS*2,
                        (sum(box.GetHeight() for box in boxes)
-                        + DeviceListRenderer.CORNER_RADIUS*2*len(boxes)
-                        + DeviceListRenderer.CORNER_RADIUS*(len(boxes) - 1)))
+                        + RADIUS*2*len(boxes) + RADIUS*(len(boxes) - 1)))
 
     def Render(self, cell, dc, state):
         position = cell.GetPosition()
         for device in self._Devices:
             box = self.GetTextExtent(device['name'])
+            RADIUS = DeviceListRenderer.CORNER_RADIUS
 
             if device['vendor'] == 'nvidia':
                 color = self._ColorDb.Find('LIME GREEN')
@@ -267,21 +266,16 @@ class DeviceListRenderer(wx.dataview.DataViewCustomRenderer):
             dc.SetBrush(wx.Brush(color))
             dc.SetPen(wx.TRANSPARENT_PEN)
             shadeRect = wx.Rect(
-                position,
-                wx.Size(box.GetWidth() + DeviceListRenderer.CORNER_RADIUS*2,
-                        box.GetHeight() + DeviceListRenderer.CORNER_RADIUS*2))
-            dc.DrawRoundedRectangle(shadeRect, DeviceListRenderer.CORNER_RADIUS)
+                    position,
+                    wx.Size(box.GetWidth() + RADIUS*2, box.GetHeight() + RADIUS*2))
+            dc.DrawRoundedRectangle(shadeRect, RADIUS)
 
             textRect = wx.Rect(
-                wx.Point(position.x + DeviceListRenderer.CORNER_RADIUS,
-                         position.y + DeviceListRenderer.CORNER_RADIUS),
-                box)
+                    wx.Point(position.x + RADIUS, position.y + RADIUS), box)
             self.RenderText(device['name'], 0, textRect, dc, state)
 
-            position = wx.Point(position.x,
-                                (position.y + box.GetHeight()
-                                 + DeviceListRenderer.CORNER_RADIUS*2
-                                 + DeviceListRenderer.CORNER_RADIUS))
+            position = wx.Point(
+                    position.x, (position.y + box.GetHeight() + RADIUS*2 + RADIUS))
         return True
 
     def _DeviceToString(device):
@@ -402,11 +396,10 @@ class MiningThread(threading.Thread):
         running_algorithms = self._assignments.values()
         speeds = {algorithm: algorithm.current_speeds()
                   for algorithm in running_algorithms}
-        revenue = {algorithm: sum([payrates[multialgorithm]
-                                   *speeds[algorithm][i]
-                                   for i, multialgorithm
-                                   in enumerate(algorithm.algorithms)])
-                    for algorithm in running_algorithms}
+        revenue = {algorithm: sum([payrates[sub_algo]*speeds[algorithm][i]
+                                  for i, sub_algo
+                                  in enumerate(algorithm.algorithms)])
+                   for algorithm in running_algorithms}
         devices = {algorithm: [device for device, this_algorithm
                                in self._assignments.items()
                                if this_algorithm == algorithm]
