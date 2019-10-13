@@ -21,7 +21,6 @@ class SettingsScreen(wx.Panel):
     def __init__(self, parent, *args, frame=None, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self._Settings = None
-        self._NewSettings = None
         pub.subscribe(self._OnSettings, 'data.settings')
 
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
@@ -47,26 +46,26 @@ class SettingsScreen(wx.Panel):
 
         add_valign(basicSizer, wx.StaticText(basicForm, label='Wallet address'))
         self._Wallet = AddressCtrl(basicForm, size=(-1, -1))
-        self.Bind(wx.EVT_TEXT, self.OnWalletChange, self._Wallet)
+        self.Bind(wx.EVT_TEXT, self.OnControlChange, self._Wallet)
         add_valign(basicSizer, self._Wallet, wx.SizerFlags().Expand())
 
         add_valign(basicSizer, wx.StaticText(basicForm, label='Worker name'))
         self._Worker = wx.TextCtrl(basicForm, size=(200, -1))
-        self.Bind(wx.EVT_TEXT, self.OnWorkerChange, self._Worker)
+        self.Bind(wx.EVT_TEXT, self.OnControlChange, self._Worker)
         add_valign(basicSizer, self._Worker)
 
         add_valign(basicSizer, wx.StaticText(basicForm, label='Region'))
         self._Region = ChoiceByValue(
-            basicForm, choices=REGIONS,
-            fallbackChoice=settings.DEFAULT_SETTINGS['nicehash']['region'])
-        self.Bind(wx.EVT_CHOICE, self.OnRegionChange, self._Region)
+                basicForm, choices=REGIONS,
+                fallbackChoice=settings.DEFAULT_SETTINGS['nicehash']['region'])
+        self.Bind(wx.EVT_CHOICE, self.OnControlChange, self._Region)
         add_valign(basicSizer, self._Region)
 
         # Add API key controls.
         apiCollapsible = wx.CollapsiblePane(
                 self, label='API Keys', style=wx.CP_NO_TLW_RESIZE)
         self.Bind(
-                wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, apiCollapsible)
+                wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChange, apiCollapsible)
         sizer.Add(apiCollapsible, wx.SizerFlags().Border(wx.ALL, main.PADDING_PX)
                                                  .Expand())
         apiPane = apiCollapsible.GetPane()
@@ -79,17 +78,20 @@ class SettingsScreen(wx.Panel):
 
         add_valign(apiFormSizer, wx.StaticText(apiForm, label='Organization ID'))
         self._Organization = wx.TextCtrl(apiForm, size=(-1, -1))
+        self.Bind(wx.EVT_TEXT, self.OnControlChange, self._Organization)
         add_valign(apiFormSizer, self._Organization, wx.SizerFlags().Expand())
 
         add_valign(apiFormSizer, wx.StaticText(apiForm, label='API Key Code'))
         self._ApiKey = wx.TextCtrl(
                 apiForm, size=(-1, -1), style=wx.TE_PASSWORD)
+        self.Bind(wx.EVT_TEXT, self.OnControlChange, self._ApiKey)
         add_valign(apiFormSizer, self._ApiKey, wx.SizerFlags().Expand())
 
         add_valign(apiFormSizer,
                    wx.StaticText(apiForm, label='API Secret Key Code'))
         self._ApiSecret = wx.TextCtrl(
                 apiForm, size=(-1, -1), style=wx.TE_PASSWORD)
+        self.Bind(wx.EVT_TEXT, self.OnControlChange, self._ApiSecret)
         add_valign(apiFormSizer, self._ApiSecret, wx.SizerFlags().Expand())
 
         apiPaneSizer.AddSpacer(main.PADDING_PX)
@@ -112,7 +114,7 @@ class SettingsScreen(wx.Panel):
                    wx.StaticText(advancedForm, label='Update interval (secs)'))
         self._Interval = wx.SpinCtrl(advancedForm, size=(125, -1),
                                      min=10, max=300, initial=60)
-        self.Bind(wx.EVT_SPINCTRL, self.OnIntervalChange, self._Interval)
+        self.Bind(wx.EVT_SPINCTRL, self.OnControlChange, self._Interval)
         add_valign(advancedSizer, self._Interval)
 
         add_valign(advancedSizer,
@@ -120,15 +122,15 @@ class SettingsScreen(wx.Panel):
                                  label='Profitability switch threshold (%)'))
         self._Threshold = wx.SpinCtrl(advancedForm, size=(125, -1),
                                       min=1, max=50, initial=10)
-        self.Bind(wx.EVT_SPINCTRL, self.OnThresholdChange, self._Threshold)
+        self.Bind(wx.EVT_SPINCTRL, self.OnControlChange, self._Threshold)
         add_valign(advancedSizer, self._Threshold)
 
         add_valign(advancedSizer,
                    wx.StaticText(advancedForm, label='Display units'))
         self._Units = ChoiceByValue(
-            advancedForm, choices=UNITS,
-            fallbackChoice=settings.DEFAULT_SETTINGS['gui']['units'])
-        self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, self._Units)
+                advancedForm, choices=UNITS,
+                fallbackChoice=settings.DEFAULT_SETTINGS['gui']['units'])
+        self.Bind(wx.EVT_CHOICE, self.OnControlChange, self._Units)
         add_valign(advancedSizer, self._Units)
 
         sizer.AddStretchSpacer()
@@ -155,52 +157,30 @@ class SettingsScreen(wx.Panel):
             self._Settings = settings
             self._Reset()
 
-    def _ChangeEvent(method):
-        @wraps(method)
-        def wrapper(self, *args, **kwargs):
-            self._Revert.Enable()
-            self._Save.Enable()
-            method(self, *args, **kwargs)
-        return wrapper
+    def OnControlChange(self, event):
+        self._Revert.Enable()
+        self._Save.Enable()
 
-    @_ChangeEvent
-    def OnWalletChange(self, event):
-        self._NewSettings['nicehash']['wallet'] = event.GetString()
-
-    @_ChangeEvent
-    def OnWorkerChange(self, event):
-        self._NewSettings['nicehash']['workername'] = event.GetString()
-
-    @_ChangeEvent
-    def OnRegionChange(self, event):
-        self._NewSettings['nicehash']['region'] = REGIONS[event.GetSelection()]
-
-    @_ChangeEvent
-    def OnIntervalChange(self, event):
-        self._NewSettings['switching']['interval'] = event.GetPosition()
-
-    @_ChangeEvent
-    def OnThresholdChange(self, event):
-        self._NewSettings['switching']['threshold'] = event.GetPosition()/100.0
-
-    @_ChangeEvent
-    def OnUnitsChange(self, event):
-        self._NewSettings['gui']['units'] = UNITS[event.GetSelection()]
-
-    def OnPaneChanged(self, event):
+    def OnPaneChange(self, event):
         self.Layout()
 
     def OnRevert(self, event):
         self._Reset()
 
     def OnSave(self, event):
-        pub.sendMessage('data.settings', settings=deepcopy(self._NewSettings))
+        new_settings = deepcopy(self._Settings)
+        new_settings['nicehash']['wallet'] = self._Wallet.GetValue()
+        new_settings['nicehash']['workername'] = self._Worker.GetValue()
+        new_settings['nicehash']['region'] = REGIONS[self._Region.GetSelection()]
+        new_settings['switching']['interval'] = self._Interval.GetValue()
+        new_settings['switching']['threshold'] = self._Threshold.GetValue()/100.0
+        new_settings['gui']['units'] = UNITS[self._Units.GetSelection()]
+        pub.sendMessage('data.settings', settings=new_settings)
+
         self._Revert.Disable()
         self._Save.Disable()
 
     def _Reset(self):
-        self._NewSettings = deepcopy(self._Settings)
-
         self._Wallet.SetValue(self._Settings['nicehash']['wallet'])
         self._Worker.SetValue(self._Settings['nicehash']['workername'])
         self._Region.SetValue(self._Settings['nicehash']['region'])
