@@ -24,7 +24,7 @@ def get_balances(nx_settings):
     address = nx_settings['nicehash']['wallet']
 
     response = nh.public_api(HOST).request(
-            'GET', f'/main/api/v2/mining/external/{address}/rigs/', '', None)
+            'GET', f'/main/api/v2/mining/external/{address}/rigs2/', '', None)
     unpaid = response.get('unpaidAmount', None)
     if response.get('externalAddress', True):
         wallet = response.get('externalBalance', None)

@@ -162,7 +162,7 @@ class private_api:
         return algo_setting
 
     def get_accounts(self):
-        return self.request('GET', '/main/api/v2/accounting/accounts/', '', None)
+        return self.request('GET', '/main/api/v2/accounting/accounts2/', '', None)
 
     def get_accounts_for_currency(self, currency):
         return self.request('GET', '/main/api/v2/accounting/account/' + currency, '', None)
