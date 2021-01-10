@@ -13,7 +13,7 @@ DEFAULT_SETTINGS = {
     'nicehash': {
         'wallet': '',
         'workername': 'nuxhash',
-        'region': 'usa',
+        'region': 'eu',
         'api_organization': '',
         'api_key': '',
         'api_secret': ''
