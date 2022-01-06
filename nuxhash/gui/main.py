@@ -7,7 +7,7 @@ from pathlib import Path
 from subprocess import Popen
 
 import wx
-from wx.lib.pubsub import pub
+from pubsub import pub
 from wx.lib.newevent import NewCommandEvent
 
 import nuxhash.settings

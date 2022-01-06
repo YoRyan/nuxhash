@@ -2,7 +2,7 @@ from copy import deepcopy
 from functools import wraps
 
 import wx
-from wx.lib.pubsub import pub
+from pubsub import pub
 from wx.lib.agw.hyperlink import HyperLinkCtrl
 
 from nuxhash import settings
