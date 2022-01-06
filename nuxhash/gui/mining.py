@@ -88,8 +88,7 @@ class MiningScreen(wx.Panel):
 
         # Add start/stop button.
         self._StartStop = wx.Button(self, label='Start Mining')
-        bottomSizer.Add(self._StartStop, wx.SizerFlags().Expand()
-                                                        .Center())
+        bottomSizer.Add(self._StartStop, wx.SizerFlags().Center())
         self.Bind(wx.EVT_BUTTON, self.OnStartStop, self._StartStop)
 
     def _OnSettings(self, settings):
