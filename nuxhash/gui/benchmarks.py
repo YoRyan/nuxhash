@@ -4,7 +4,7 @@ import threading
 import wx
 import wx.dataview
 from wx.lib.newevent import NewCommandEvent
-from wx.lib.pubsub import pub
+from pubsub import pub
 from wx.lib.scrolledpanel import ScrolledPanel
 
 from nuxhash import utils

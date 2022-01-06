@@ -9,7 +9,7 @@ from random import random
 
 import wx
 import wx.dataview
-from wx.lib.pubsub import pub
+from pubsub import pub
 
 from nuxhash import nicehash, utils
 from nuxhash.bitcoin import check_bc
