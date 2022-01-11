@@ -192,7 +192,7 @@ class SettingsScreen(wx.Panel):
         self._ApiKey.SetValue(self._Settings['nicehash']['api_key'])
         self._ApiSecret.SetValue(self._Settings['nicehash']['api_secret'])
         self._Interval.SetValue(self._Settings['switching']['interval'])
-        self._Threshold.SetValue(self._Settings['switching']['threshold']*100)
+        self._Threshold.SetValue(int(self._Settings['switching']['threshold']*100))
         self._Units.SetValue(self._Settings['gui']['units'])
         self._Revert.Disable()
         self._Save.Disable()
