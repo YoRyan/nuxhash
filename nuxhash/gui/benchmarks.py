@@ -53,7 +53,7 @@ class BenchmarksScreen(wx.Panel):
         innerWindow.SetupScrolling()
         sizer.Add(innerWindow, wx.SizerFlags().Border(wx.LEFT|wx.RIGHT|wx.TOP,
                                                       main.PADDING_PX)
-                                              .Proportion(1.0)
+                                              .Proportion(1)
                                               .Expand())
         innerSizer = wx.BoxSizer(orient=wx.VERTICAL)
         innerWindow.SetSizer(innerSizer)
