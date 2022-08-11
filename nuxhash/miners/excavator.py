@@ -30,7 +30,6 @@ ALGORITHMS = [
     'lyra2z',
     'x16r'
     ]
-NHMP_PORT = 3200
 
 
 class ExcavatorError(Exception):
@@ -135,7 +134,7 @@ class ExcavatorServer(object):
 
     def _subscribe(self):
         region, wallet, worker = self._subscription
-        self.send_command('subscribe', [f'nhmp.{region}.nicehash.com:{NHMP_PORT}',
+        self.send_command('subscribe', [f'nhmp.auto.nicehash.com:9200',
                                         f'{wallet}.{worker}:x'])
 
     def stop(self):
